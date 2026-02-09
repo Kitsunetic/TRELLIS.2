@@ -11,7 +11,7 @@ from .rope import SparseRotaryPositionEmbedder
 class SparseMultiHeadRMSNorm(nn.Module):
     def __init__(self, dim: int, heads: int):
         super().__init__()
-        self.scale = dim ** 0.5
+        self.scale = dim**0.5
         self.gamma = nn.Parameter(torch.ones(heads, dim))
 
     def forward(self, x: Union[VarLenTensor, torch.Tensor]) -> Union[VarLenTensor, torch.Tensor]:
@@ -45,7 +45,7 @@ class SparseMultiHeadAttention(nn.Module):
         assert attn_mode in ["full", "windowed", "double_windowed"], f"Invalid attention mode: {attn_mode}"
         assert type == "self" or attn_mode == "full", "Cross-attention only supports full attention"
         assert type == "self" or use_rope is False, "Rotary position embeddings only supported for self-attention"
-        if attn_mode == 'double_windowed':
+        if attn_mode == "double_windowed":
             assert window_size % 2 == 0, "Window size must be even for double windowed attention"
             assert num_heads % 2 == 0, "Number of heads must be even for double windowed attention"
         self.channels = channels
@@ -64,11 +64,11 @@ class SparseMultiHeadAttention(nn.Module):
         else:
             self.to_q = nn.Linear(channels, channels, bias=qkv_bias)
             self.to_kv = nn.Linear(self.ctx_channels, channels * 2, bias=qkv_bias)
-        
+
         if self.qk_rms_norm:
             self.q_rms_norm = SparseMultiHeadRMSNorm(self.head_dim, num_heads)
             self.k_rms_norm = SparseMultiHeadRMSNorm(self.head_dim, num_heads)
-            
+
         self.to_out = nn.Linear(channels, channels)
 
         if use_rope:
@@ -95,7 +95,7 @@ class SparseMultiHeadAttention(nn.Module):
             x_feats = x
         x_feats = x_feats.reshape(*x_feats.shape[:2], num_fused, self.num_heads, -1)
         return x.replace(x_feats.squeeze(0)) if isinstance(x, VarLenTensor) else x_feats
-    
+
     def forward(self, x: SparseTensor, context: Optional[Union[VarLenTensor, torch.Tensor]] = None) -> SparseTensor:
         if self._type == "self":
             qkv = self._linear(self.to_qkv, x)
@@ -111,17 +111,13 @@ class SparseMultiHeadAttention(nn.Module):
             if self.attn_mode == "full":
                 h = sparse_scaled_dot_product_attention(qkv)
             elif self.attn_mode == "windowed":
-                h = sparse_windowed_scaled_dot_product_self_attention(
-                    qkv, self.window_size, shift_window=self.shift_window
-                )
+                h = sparse_windowed_scaled_dot_product_self_attention(qkv, self.window_size, shift_window=self.shift_window)
             elif self.attn_mode == "double_windowed":
-                qkv0 = qkv.replace(qkv.feats[:, :, self.num_heads//2:])
-                qkv1 = qkv.replace(qkv.feats[:, :, :self.num_heads//2])
-                h0 = sparse_windowed_scaled_dot_product_self_attention(
-                    qkv0, self.window_size, shift_window=(0, 0, 0)
-                )
+                qkv0 = qkv.replace(qkv.feats[:, :, self.num_heads // 2 :])
+                qkv1 = qkv.replace(qkv.feats[:, :, : self.num_heads // 2])
+                h0 = sparse_windowed_scaled_dot_product_self_attention(qkv0, self.window_size, shift_window=(0, 0, 0))
                 h1 = sparse_windowed_scaled_dot_product_self_attention(
-                    qkv1, self.window_size, shift_window=tuple([self.window_size//2] * 3)
+                    qkv1, self.window_size, shift_window=tuple([self.window_size // 2] * 3)
                 )
                 h = qkv.replace(torch.cat([h0.feats, h1.feats], dim=1))
         else:

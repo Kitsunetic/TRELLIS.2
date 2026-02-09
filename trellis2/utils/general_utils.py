@@ -6,20 +6,22 @@ import contextlib
 
 
 # Dictionary utils
-def _dict_merge(dicta, dictb, prefix=''):
+def _dict_merge(dicta, dictb, prefix=""):
     """
     Merge two dictionaries.
     """
-    assert isinstance(dicta, dict), 'input must be a dictionary'
-    assert isinstance(dictb, dict), 'input must be a dictionary'
+    assert isinstance(dicta, dict), "input must be a dictionary"
+    assert isinstance(dictb, dict), "input must be a dictionary"
     dict_ = {}
     all_keys = set(dicta.keys()).union(set(dictb.keys()))
     for key in all_keys:
         if key in dicta.keys() and key in dictb.keys():
             if isinstance(dicta[key], dict) and isinstance(dictb[key], dict):
-                dict_[key] = _dict_merge(dicta[key], dictb[key], prefix=f'{prefix}.{key}')
+                dict_[key] = _dict_merge(dicta[key], dictb[key], prefix=f"{prefix}.{key}")
             else:
-                raise ValueError(f'Duplicate key {prefix}.{key} found in both dictionaries. Types: {type(dicta[key])}, {type(dictb[key])}')
+                raise ValueError(
+                    f"Duplicate key {prefix}.{key} found in both dictionaries. Types: {type(dicta[key])}, {type(dictb[key])}"
+                )
         elif key in dicta.keys():
             dict_[key] = dicta[key]
         else:
@@ -31,14 +33,14 @@ def dict_merge(dicta, dictb):
     """
     Merge two dictionaries.
     """
-    return _dict_merge(dicta, dictb, prefix='')
+    return _dict_merge(dicta, dictb, prefix="")
 
 
 def dict_foreach(dic, func, special_func={}):
     """
     Recursively apply a function to all non-dictionary leaf values in a dictionary.
     """
-    assert isinstance(dic, dict), 'input must be a dictionary'
+    assert isinstance(dic, dict), "input must be a dictionary"
     for key in dic.keys():
         if isinstance(dic[key], dict):
             dic[key] = dict_foreach(dic[key], func)
@@ -54,9 +56,9 @@ def dict_reduce(dicts, func, special_func={}):
     """
     Reduce a list of dictionaries. Leaf values must be scalars.
     """
-    assert isinstance(dicts, list), 'input must be a list of dictionaries'
-    assert all([isinstance(d, dict) for d in dicts]), 'input must be a list of dictionaries'
-    assert len(dicts) > 0, 'input must be a non-empty list of dictionaries'
+    assert isinstance(dicts, list), "input must be a list of dictionaries"
+    assert all([isinstance(d, dict) for d in dicts]), "input must be a list of dictionaries"
+    assert len(dicts) > 0, "input must be a non-empty list of dictionaries"
     all_keys = set([key for dict_ in dicts for key in dict_.keys()])
     reduced_dict = {}
     for key in all_keys:
@@ -75,7 +77,7 @@ def dict_any(dic, func):
     """
     Recursively apply a function to all non-dictionary leaf values in a dictionary.
     """
-    assert isinstance(dic, dict), 'input must be a dictionary'
+    assert isinstance(dic, dict), "input must be a dictionary"
     for key in dic.keys():
         if isinstance(dic[key], dict):
             if dict_any(dic[key], func):
@@ -90,7 +92,7 @@ def dict_all(dic, func):
     """
     Recursively apply a function to all non-dictionary leaf values in a dictionary.
     """
-    assert isinstance(dic, dict), 'input must be a dictionary'
+    assert isinstance(dic, dict), "input must be a dictionary"
     for key in dic.keys():
         if isinstance(dic[key], dict):
             if not dict_all(dic[key], func):
@@ -101,11 +103,11 @@ def dict_all(dic, func):
     return True
 
 
-def dict_flatten(dic, sep='.'):
+def dict_flatten(dic, sep="."):
     """
     Flatten a nested dictionary into a dictionary with no nested dictionaries.
     """
-    assert isinstance(dic, dict), 'input must be a dictionary'
+    assert isinstance(dic, dict), "input must be a dictionary"
     flat_dict = {}
     for key in dic.keys():
         if isinstance(dic[key], dict):
@@ -140,8 +142,8 @@ def make_grid(images, nrow=None, ncol=None, aspect_ratio=None):
     elif nrow is not None and ncol is None:
         ncol = (num_images + nrow - 1) // nrow
     else:
-        assert nrow * ncol >= num_images, 'nrow * ncol must be greater than or equal to the number of images'
-    
+        assert nrow * ncol >= num_images, "nrow * ncol must be greater than or equal to the number of images"
+
     if images[0].ndim == 2:
         grid = np.zeros((nrow * images[0].shape[0], ncol * images[0].shape[1]), dtype=images[0].dtype)
     else:
@@ -149,18 +151,17 @@ def make_grid(images, nrow=None, ncol=None, aspect_ratio=None):
     for i, img in enumerate(images):
         row = i // ncol
         col = i % ncol
-        grid[row * img.shape[0]:(row + 1) * img.shape[0], col * img.shape[1]:(col + 1) * img.shape[1]] = img
+        grid[row * img.shape[0] : (row + 1) * img.shape[0], col * img.shape[1] : (col + 1) * img.shape[1]] = img
     return grid
 
 
 def notes_on_image(img, notes=None):
-    img = np.pad(img, ((0, 32), (0, 0), (0, 0)), 'constant', constant_values=0)
+    img = np.pad(img, ((0, 32), (0, 0), (0, 0)), "constant", constant_values=0)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     if notes is not None:
         img = cv2.putText(img, notes, (0, img.shape[0] - 4), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return img
-
 
 
 def text_image(text, resolution=(512, 512), max_size=0.5, h_align="left", v_align="center"):
@@ -169,14 +170,14 @@ def text_image(text, resolution=(512, 512), max_size=0.5, h_align="left", v_alig
     and scaled so that it fits completely within the image while preserving any explicit
     line breaks and original spacing. Horizontal and vertical alignment can be controlled
     via flags.
-    
+
     Parameters:
         text (str): The input text. Newline characters and spacing are preserved.
         resolution (tuple): The image resolution as (width, height).
         max_size (float): The maximum font size.
         h_align (str): Horizontal alignment. Options: "left", "center", "right".
         v_align (str): Vertical alignment. Options: "top", "center", "bottom".
-        
+
     Returns:
         numpy.ndarray: The resulting image (BGR format) with the text drawn.
     """
@@ -201,22 +202,22 @@ def text_image(text, resolution=(512, 512), max_size=0.5, h_align="left", v_alig
         width (measured at the given scale) does not exceed max_width.
         This function preserves the original spacing by splitting the line into tokens
         (words and whitespace) using a regular expression.
-        
+
         Parameters:
             line (str): The input text line.
             max_width (int): Maximum allowed width in pixels.
             font (int): OpenCV font identifier.
             thickness (int): Text thickness.
             scale (float): The current font scale.
-            
+
         Returns:
             List[str]: A list of wrapped lines.
         """
         # Split the line into tokens (words and whitespace), preserving spacing
-        tokens = re.split(r'(\s+)', line)
+        tokens = re.split(r"(\s+)", line)
         if not tokens:
-            return ['']
-        
+            return [""]
+
         wrapped_lines = []
         current_line = ""
         for token in tokens:
@@ -249,7 +250,7 @@ def text_image(text, resolution=(512, 512), max_size=0.5, h_align="left", v_alig
         """
         Wrap the entire text (splitting at explicit newline characters) using the
         provided scale, and then compute the overall width and height of the text block.
-        
+
         Returns:
             wrapped_lines (List[str]): The list of wrapped lines.
             block_width (int): Maximum width among the wrapped lines.
@@ -258,23 +259,23 @@ def text_image(text, resolution=(512, 512), max_size=0.5, h_align="left", v_alig
             spacing (int): The spacing between lines (computed from the scaled "A" height).
         """
         # Split text by explicit newlines
-        input_lines = text.splitlines() if text else ['']
+        input_lines = text.splitlines() if text else [""]
         wrapped_lines = []
         for line in input_lines:
             wrapped = wrap_line(line, avail_width, font, thickness, scale)
             wrapped_lines.extend(wrapped)
-            
+
         sizes = []
         for line in wrapped_lines:
             (text_size, _) = cv2.getTextSize(line, font, scale, thickness)
             sizes.append(text_size)  # (width, height)
-            
+
         block_width = max((w for w, h in sizes), default=0)
         # Use the height of "A" (at the current scale) to compute line spacing
         base_height = cv2.getTextSize("A", font, scale, thickness)[0][1]
         spacing = int(line_spacing_ratio * base_height)
         block_height = sum(h for w, h in sizes) + spacing * (len(sizes) - 1) if sizes else 0
-        
+
         return wrapped_lines, block_width, block_height, sizes, spacing
 
     # Use binary search to find the maximum scale that allows the text block to fit
@@ -298,7 +299,7 @@ def text_image(text, resolution=(512, 512), max_size=0.5, h_align="left", v_alig
     if best_result is None:
         best_scale = 0.5
         best_result = compute_text_block(best_scale)
-        
+
     wrapped_lines, block_width, block_height, sizes, spacing = best_result
 
     # Compute starting y-coordinate based on vertical alignment flag
@@ -347,6 +348,7 @@ def save_image_with_notes(img, path, notes=None):
 
 # debug utils
 
+
 def atol(x, y):
     """
     Absolute tolerance.
@@ -366,8 +368,7 @@ def indent(s, n=4):
     """
     Indent a string.
     """
-    lines = s.split('\n')
+    lines = s.split("\n")
     for i in range(1, len(lines)):
-        lines[i] = ' ' * n + lines[i]
-    return '\n'.join(lines)
-
+        lines[i] = " " * n + lines[i]
+    return "\n".join(lines)

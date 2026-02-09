@@ -5,10 +5,10 @@ from . import VarLenTensor
 from . import config
 
 __all__ = [
-    'SparseGroupNorm',
-    'SparseLayerNorm',
-    'SparseGroupNorm32',
-    'SparseLayerNorm32',
+    "SparseGroupNorm",
+    "SparseLayerNorm",
+    "SparseGroupNorm32",
+    "SparseLayerNorm32",
 ]
 
 
@@ -46,6 +46,7 @@ class SparseGroupNorm32(SparseGroupNorm):
     """
     A GroupNorm layer that converts to float32 before the forward pass.
     """
+
     def forward(self, x: VarLenTensor) -> VarLenTensor:
         x_dtype = x.dtype
         x = manual_cast(x, torch.float32)
@@ -57,6 +58,7 @@ class SparseLayerNorm32(SparseLayerNorm):
     """
     A LayerNorm layer that converts to float32 before the forward pass.
     """
+
     def forward(self, x: VarLenTensor) -> VarLenTensor:
         x_dtype = x.dtype
         x = manual_cast(x, torch.float32)

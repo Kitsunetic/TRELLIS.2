@@ -1,15 +1,16 @@
 import importlib
 
 __attributes = {
-    'MeshRenderer': 'mesh_renderer',
-    'VoxelRenderer': 'voxel_renderer',
-    'PbrMeshRenderer': 'pbr_mesh_renderer',
-    'EnvMap': 'pbr_mesh_renderer',
+    "MeshRenderer": "mesh_renderer",
+    "VoxelRenderer": "voxel_renderer",
+    "PbrMeshRenderer": "pbr_mesh_renderer",
+    "EnvMap": "pbr_mesh_renderer",
 }
 
 __submodules = []
 
 __all__ = list(__attributes.keys()) + __submodules
+
 
 def __getattr__(name):
     if name not in globals():
@@ -26,8 +27,7 @@ def __getattr__(name):
 
 
 # For Pylance
-if __name__ == '__main__':
+if __name__ == "__main__":
     from .mesh_renderer import MeshRenderer
     from .voxel_renderer import VoxelRenderer
     from .pbr_mesh_renderer import PbrMeshRenderer, EnvMap
-    

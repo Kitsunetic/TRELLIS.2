@@ -41,7 +41,7 @@ def load_balanced_group_indices(
         min_group_idx = np.argmin(group_load)
         groups[min_group_idx].append(idx)
         if equal_size and len(groups[min_group_idx]) == group_size:
-            group_load[min_group_idx] = float('inf')
+            group_load[min_group_idx] = float("inf")
         else:
             group_load[min_group_idx] += load[idx]
     return groups
@@ -51,14 +51,14 @@ def cycle(data_loader: DataLoader) -> Iterator:
     while True:
         for data in data_loader:
             if isinstance(data_loader.sampler, ResumableSampler):
-                data_loader.sampler.idx += data_loader.batch_size   # type: ignore[attr-defined]
+                data_loader.sampler.idx += data_loader.batch_size  # type: ignore[attr-defined]
             yield data
         if isinstance(data_loader.sampler, DistributedSampler):
             data_loader.sampler.epoch += 1
         if isinstance(data_loader.sampler, ResumableSampler):
             data_loader.sampler.epoch += 1
             data_loader.sampler.idx = 0
-        
+
 
 class ResumableSampler(Sampler):
     """
@@ -99,9 +99,7 @@ class ResumableSampler(Sampler):
             # Split to nearest available length that is evenly divisible.
             # This is to ensure each rank receives the same amount of data when
             # using this Sampler.
-            self.num_samples = math.ceil(
-                (len(self.dataset) - self.world_size) / self.world_size  # type: ignore[arg-type]
-            )
+            self.num_samples = math.ceil((len(self.dataset) - self.world_size) / self.world_size)  # type: ignore[arg-type]
         else:
             self.num_samples = math.ceil(len(self.dataset) / self.world_size)  # type: ignore[arg-type]
         self.total_size = self.num_samples * self.world_size
@@ -123,9 +121,7 @@ class ResumableSampler(Sampler):
             if padding_size <= len(indices):
                 indices += indices[:padding_size]
             else:
-                indices += (indices * math.ceil(padding_size / len(indices)))[
-                    :padding_size
-                ]
+                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
         else:
             # remove tail of data to make it evenly divisible.
             indices = indices[: self.total_size]
@@ -133,9 +129,9 @@ class ResumableSampler(Sampler):
 
         # subsample
         indices = indices[self.rank : self.total_size : self.world_size]
-        
+
         # resume from previous state
-        indices = indices[self.idx:]
+        indices = indices[self.idx :]
 
         return iter(indices)
 
@@ -144,14 +140,14 @@ class ResumableSampler(Sampler):
 
     def state_dict(self) -> dict[str, int]:
         return {
-            'epoch': self.epoch,
-            'idx': self.idx,
+            "epoch": self.epoch,
+            "idx": self.idx,
         }
-        
+
     def load_state_dict(self, state_dict):
-        self.epoch = state_dict['epoch']
-        self.idx = state_dict['idx']
-        
+        self.epoch = state_dict["epoch"]
+        self.idx = state_dict["idx"]
+
 
 class BalancedResumableSampler(ResumableSampler):
     """
@@ -181,11 +177,11 @@ class BalancedResumableSampler(ResumableSampler):
         drop_last: bool = False,
         batch_size: int = 1,
     ) -> None:
-        assert hasattr(dataset, 'loads'), 'Dataset must have "loads" attribute to use BalancedResumableSampler'
+        assert hasattr(dataset, "loads"), 'Dataset must have "loads" attribute to use BalancedResumableSampler'
         super().__init__(dataset, shuffle, seed, drop_last)
         self.batch_size = batch_size
         self.loads = dataset.loads
-        
+
     def __iter__(self) -> Iterator:
         if self.shuffle:
             # deterministically shuffle based on epoch and seed
@@ -201,9 +197,7 @@ class BalancedResumableSampler(ResumableSampler):
             if padding_size <= len(indices):
                 indices += indices[:padding_size]
             else:
-                indices += (indices * math.ceil(padding_size / len(indices)))[
-                    :padding_size
-                ]
+                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
         else:
             # remove tail of data to make it evenly divisible.
             indices = indices[: self.total_size]
@@ -219,8 +213,8 @@ class BalancedResumableSampler(ResumableSampler):
             batch_loads = [self.loads[idx] for idx in batch_indices]
             groups = load_balanced_group_indices(batch_loads, self.world_size, equal_size=True)
             balanced_indices.extend([batch_indices[j] for j in groups[self.rank]])
-        
+
         # resume from previous state
-        indices = balanced_indices[self.idx:]
+        indices = balanced_indices[self.idx :]
 
         return iter(indices)

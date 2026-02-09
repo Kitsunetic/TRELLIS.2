@@ -4,7 +4,9 @@ from . import _C
 
 
 @torch.no_grad()
-def encode_seq(coords: torch.Tensor, permute: List[int] = [0, 1, 2], mode: Literal['z_order', 'hilbert'] = 'z_order') -> torch.Tensor:
+def encode_seq(
+    coords: torch.Tensor, permute: List[int] = [0, 1, 2], mode: Literal["z_order", "hilbert"] = "z_order"
+) -> torch.Tensor:
     """
     Encodes 3D coordinates into a 30-bit code.
 
@@ -17,17 +19,17 @@ def encode_seq(coords: torch.Tensor, permute: List[int] = [0, 1, 2], mode: Liter
     x = coords[:, permute[0]].int()
     y = coords[:, permute[1]].int()
     z = coords[:, permute[2]].int()
-    if mode == 'z_order':
-        if coords.device.type == 'cpu':
+    if mode == "z_order":
+        if coords.device.type == "cpu":
             return _C.z_order_encode_cpu(x, y, z)
-        elif coords.device.type == 'cuda':
+        elif coords.device.type == "cuda":
             return _C.z_order_encode_cuda(x, y, z)
         else:
             raise ValueError(f"Unsupported device type: {coords.device.type}")
-    elif mode == 'hilbert':
-        if coords.device.type == 'cpu':
+    elif mode == "hilbert":
+        if coords.device.type == "cpu":
             return _C.hilbert_encode_cpu(x, y, z)
-        elif coords.device.type == 'cuda':
+        elif coords.device.type == "cuda":
             return _C.hilbert_encode_cuda(x, y, z)
         else:
             raise ValueError(f"Unsupported device type: {coords.device.type}")
@@ -36,7 +38,9 @@ def encode_seq(coords: torch.Tensor, permute: List[int] = [0, 1, 2], mode: Liter
 
 
 @torch.no_grad()
-def decode_seq(code: torch.Tensor, permute: List[int] = [0, 1, 2], mode: Literal['z_order', 'hilbert'] = 'z_order') -> torch.Tensor:
+def decode_seq(
+    code: torch.Tensor, permute: List[int] = [0, 1, 2], mode: Literal["z_order", "hilbert"] = "z_order"
+) -> torch.Tensor:
     """
     Decodes a 30-bit code into 3D coordinates.
 
@@ -46,17 +50,17 @@ def decode_seq(code: torch.Tensor, permute: List[int] = [0, 1, 2], mode: Literal
         mode: the decoding mode to use.
     """
     assert code.ndim == 1, "Input code must be of shape [N]"
-    if mode == 'z_order':
-        if code.device.type == 'cpu':
+    if mode == "z_order":
+        if code.device.type == "cpu":
             coords = _C.z_order_decode_cpu(code)
-        elif code.device.type == 'cuda':
+        elif code.device.type == "cuda":
             coords = _C.z_order_decode_cuda(code)
         else:
             raise ValueError(f"Unsupported device type: {code.device.type}")
-    elif mode == 'hilbert':
-        if code.device.type == 'cpu':
+    elif mode == "hilbert":
+        if code.device.type == "cpu":
             coords = _C.hilbert_decode_cpu(code)
-        elif code.device.type == 'cuda':
+        elif code.device.type == "cuda":
             coords = _C.hilbert_decode_cuda(code)
         else:
             raise ValueError(f"Unsupported device type: {code.device.type}")

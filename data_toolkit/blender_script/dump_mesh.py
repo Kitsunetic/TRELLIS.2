@@ -84,11 +84,11 @@ def load_object(object_path: str) -> None:
     if file_extension == "blend":
         import_function(directory=object_path, link=False)
     elif file_extension in {"glb", "gltf"}:
-        import_function(filepath=object_path, merge_vertices=True, import_shading='NORMALS', bone_heuristic='TEMPERANCE')
+        import_function(filepath=object_path, merge_vertices=True, import_shading="NORMALS", bone_heuristic="TEMPERANCE")
     else:
         import_function(filepath=object_path)
-        
-        
+
+
 def delete_invisible_objects() -> None:
     """Deletes all invisible objects in the scene.
 
@@ -109,7 +109,7 @@ def delete_invisible_objects() -> None:
     invisible_collections = [col for col in bpy.data.collections if col.hide_viewport]
     for col in invisible_collections:
         bpy.data.collections.remove(col)
-      
+
 
 def scene_bbox() -> Tuple[Vector, Vector]:
     """Returns the bounding box of the scene.
@@ -169,74 +169,70 @@ def normalize_scene() -> Tuple[float, Vector]:
     bbox_min, bbox_max = scene_bbox()
     offset = -(bbox_min + bbox_max) / 2
     scene.matrix_world.translation += offset
-    
+
     return scale, offset
 
 
-def main(arg):    
+def main(arg):
     # Initialize context
     if arg.object.endswith(".blend"):
         delete_invisible_objects()
     else:
         init_scene()
         load_object(arg.object)
-    print('[INFO] Scene initialized.')
-    
+    print("[INFO] Scene initialized.")
+
     # Normalize scene
     scale, offset = normalize_scene()
-    print('[INFO] Scene normalized.')
-    
+    print("[INFO] Scene normalized.")
+
     # Start dumping
     depsgraph = bpy.context.evaluated_depsgraph_get()
     scene = bpy.context.scene
     output = {
-        'objects': [],
+        "objects": [],
     }
 
     # Dumping meshes
     for obj in scene.objects:
-        if obj.type != 'MESH':
+        if obj.type != "MESH":
             continue
-        
+
         pack = {
             "vertices": None,
             "faces": None,
         }
-        
+
         eval_obj = obj.evaluated_get(depsgraph)
         eval_mesh = eval_obj.to_mesh()
-        
+
         bm = bmesh.new()
         bm.from_mesh(eval_mesh)
         bm.transform(obj.matrix_world)
         bmesh.ops.triangulate(bm, faces=bm.faces)
         bm.to_mesh(eval_mesh)
         bm.free()
-                
-        pack["vertices"] = np.array([
-            v.co[:] for v in eval_mesh.vertices
-        ], dtype=np.float32)   # (N, 3)
-        
-        pack["faces"] = np.array([
-            [eval_mesh.loops[i].vertex_index for i in poly.loop_indices]
-            for poly in eval_mesh.polygons
-        ], dtype=np.int32)   # (F, 3)
 
-        output['objects'].append(pack)
+        pack["vertices"] = np.array([v.co[:] for v in eval_mesh.vertices], dtype=np.float32)  # (N, 3)
+
+        pack["faces"] = np.array(
+            [[eval_mesh.loops[i].vertex_index for i in poly.loop_indices] for poly in eval_mesh.polygons], dtype=np.int32
+        )  # (F, 3)
+
+        output["objects"].append(pack)
 
     # Save output
     os.makedirs(os.path.dirname(arg.output_path), exist_ok=True)
-    with open(arg.output_path, 'wb') as f:
+    with open(arg.output_path, "wb") as f:
         pickle.dump(output, f)
-    print('[INFO] Output saved to {}.'.format(arg.output_path))
+    print("[INFO] Output saved to {}.".format(arg.output_path))
 
-        
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
-    parser.add_argument('--object', type=str, help='Path to the 3D model file to be rendered.')
-    parser.add_argument('--output_path', type=str, default='/tmp', help='The path the output will be dumped to.')
-    argv = sys.argv[sys.argv.index("--") + 1:]
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Renders given obj file by rotation a camera around it.")
+    parser.add_argument("--object", type=str, help="Path to the 3D model file to be rendered.")
+    parser.add_argument("--output_path", type=str, default="/tmp", help="The path the output will be dumped to.")
+    argv = sys.argv[sys.argv.index("--") + 1 :]
     args = parser.parse_args(argv)
 
     main(args)
-    

@@ -25,9 +25,9 @@ else:
 setup(
     name="o_voxel",
     packages=[
-        'o_voxel',
-        'o_voxel.convert',
-        'o_voxel.io',
+        "o_voxel",
+        "o_voxel.convert",
+        "o_voxel.io",
     ],
     ext_modules=[
         CUDAExtension(
@@ -48,7 +48,6 @@ setup(
                 "src/io/filter_neighbor.cpp",
                 # Rasterization functions
                 "src/rasterize/rasterize.cu",
-                
                 # main
                 "src/ext.cpp",
             ],
@@ -57,11 +56,9 @@ setup(
             ],
             extra_compile_args={
                 "cxx": ["-O3", "-std=c++17"],
-                "nvcc": ["-O3","-std=c++17"] + cc_flag,
-            }
+                "nvcc": ["-O3", "-std=c++17"] + cc_flag,
+            },
         )
     ],
-    cmdclass={
-        'build_ext': BuildExtension
-    }
+    cmdclass={"build_ext": BuildExtension},
 )

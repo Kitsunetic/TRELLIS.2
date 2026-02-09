@@ -5,10 +5,10 @@ from . import _C
 
 
 def intrinsics_to_projection(
-        intrinsics: torch.Tensor,
-        near: float,
-        far: float,
-    ) -> torch.Tensor:
+    intrinsics: torch.Tensor,
+    near: float,
+    far: float,
+) -> torch.Tensor:
     """
     OpenCV intrinsics to OpenGL perspective matrix
 
@@ -25,10 +25,10 @@ def intrinsics_to_projection(
     ret[0, 0] = 2 * fx
     ret[1, 1] = 2 * fy
     ret[0, 2] = 2 * cx - 1
-    ret[1, 2] = - 2 * cy + 1
+    ret[1, 2] = -2 * cy + 1
     ret[2, 2] = far / (far - near)
     ret[2, 3] = near * far / (near - far)
-    ret[3, 2] = 1.
+    ret[3, 2] = 1.0
     return ret
 
 
@@ -41,22 +41,24 @@ class VoxelRenderer:
     """
 
     def __init__(self, rendering_options={}) -> None:
-        self.rendering_options = edict({
-            "resolution": None,
-            "near": 0.1,
-            "far": 10.0,
-            "ssaa": 1,
-        })
+        self.rendering_options = edict(
+            {
+                "resolution": None,
+                "near": 0.1,
+                "far": 10.0,
+                "ssaa": 1,
+            }
+        )
         self.rendering_options.update(rendering_options)
-    
+
     def render(
-            self,
-            position: torch.Tensor,
-            attrs: torch.Tensor,
-            voxel_size: float,
-            extrinsics: torch.Tensor,
-            intrinsics: torch.Tensor,
-        ) -> edict:
+        self,
+        position: torch.Tensor,
+        attrs: torch.Tensor,
+        voxel_size: float,
+        extrinsics: torch.Tensor,
+        intrinsics: torch.Tensor,
+    ) -> edict:
         """
         Render the octree.
 
@@ -77,7 +79,7 @@ class VoxelRenderer:
         near = self.rendering_options["near"]
         far = self.rendering_options["far"]
         ssaa = self.rendering_options["ssaa"]
-        
+
         view = extrinsics
         perspective = intrinsics_to_projection(intrinsics, near, far)
         camera = torch.inverse(view)[:3, 3]
@@ -98,14 +100,21 @@ class VoxelRenderer:
         color, depth, alpha = _C.rasterize_voxels_cuda(*args)
 
         if ssaa > 1:
-            color = F.interpolate(color[None], size=(resolution, resolution), mode='bilinear', align_corners=False, antialias=True).squeeze()
-            depth = F.interpolate(depth[None, None], size=(resolution, resolution), mode='bilinear', align_corners=False, antialias=True).squeeze()
-            alpha = F.interpolate(alpha[None, None], size=(resolution, resolution), mode='bilinear', align_corners=False, antialias=True).squeeze()
-            
-        ret = edict({
-            'attr': color,
-            'depth': depth,
-            'alpha': alpha,
-        })
+            color = F.interpolate(
+                color[None], size=(resolution, resolution), mode="bilinear", align_corners=False, antialias=True
+            ).squeeze()
+            depth = F.interpolate(
+                depth[None, None], size=(resolution, resolution), mode="bilinear", align_corners=False, antialias=True
+            ).squeeze()
+            alpha = F.interpolate(
+                alpha[None, None], size=(resolution, resolution), mode="bilinear", align_corners=False, antialias=True
+            ).squeeze()
+
+        ret = edict(
+            {
+                "attr": color,
+                "depth": depth,
+                "alpha": alpha,
+            }
+        )
         return ret
-    

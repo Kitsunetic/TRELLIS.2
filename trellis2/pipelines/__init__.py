@@ -5,9 +5,10 @@ __attributes = {
     "Trellis2TexturingPipeline": "trellis2_texturing",
 }
 
-__submodules = ['samplers', 'rembg']
+__submodules = ["samplers", "rembg"]
 
 __all__ = list(__attributes.keys()) + __submodules
+
 
 def __getattr__(name):
     if name not in globals():
@@ -32,21 +33,23 @@ def from_pretrained(path: str):
     """
     import os
     import json
+
     is_local = os.path.exists(f"{path}/pipeline.json")
 
     if is_local:
         config_file = f"{path}/pipeline.json"
     else:
         from huggingface_hub import hf_hub_download
+
         config_file = hf_hub_download(path, "pipeline.json")
 
-    with open(config_file, 'r') as f:
+    with open(config_file, "r") as f:
         config = json.load(f)
-    return globals()[config['name']].from_pretrained(path)
+    return globals()[config["name"]].from_pretrained(path)
 
 
 # For PyLance
-if __name__ == '__main__':
+if __name__ == "__main__":
     from . import samplers, rembg
     from .trellis2_image_to_3d import Trellis2ImageTo3DPipeline
     from .trellis2_texturing import Trellis2TexturingPipeline

@@ -23,39 +23,31 @@ IMPORT_FUNCTIONS: Dict[str, Callable] = {
     "blend": bpy.ops.wm.append,
 }
 
-EXT = {
-    'PNG': 'png',
-    'JPEG': 'jpg',
-    'OPEN_EXR': 'exr',
-    'TIFF': 'tiff',
-    'BMP': 'bmp',
-    'HDR': 'hdr',
-    'TARGA': 'tga'
-}
+EXT = {"PNG": "png", "JPEG": "jpg", "OPEN_EXR": "exr", "TIFF": "tiff", "BMP": "bmp", "HDR": "hdr", "TARGA": "tga"}
 
 
-def init_render(engine='CYCLES', resolution=512):
+def init_render(engine="CYCLES", resolution=512):
     bpy.context.scene.render.engine = engine
     bpy.context.scene.render.resolution_x = resolution
     bpy.context.scene.render.resolution_y = resolution
     bpy.context.scene.render.resolution_percentage = 100
-    bpy.context.scene.render.image_settings.file_format = 'PNG'
-    bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+    bpy.context.scene.render.image_settings.file_format = "PNG"
+    bpy.context.scene.render.image_settings.color_mode = "RGBA"
     bpy.context.scene.render.film_transparent = True
-    
-    bpy.context.scene.cycles.device = 'GPU'
+
+    bpy.context.scene.cycles.device = "GPU"
     bpy.context.scene.cycles.samples = 32
-    bpy.context.scene.cycles.filter_type = 'BOX'
+    bpy.context.scene.cycles.filter_type = "BOX"
     bpy.context.scene.cycles.filter_width = 1
     bpy.context.scene.cycles.diffuse_bounces = 1
     bpy.context.scene.cycles.glossy_bounces = 1
     bpy.context.scene.cycles.transparent_max_bounces = 3
     bpy.context.scene.cycles.transmission_bounces = 3
     bpy.context.scene.cycles.use_denoising = True
-        
-    bpy.context.preferences.addons['cycles'].preferences.get_devices()
-    bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
-    
+
+    bpy.context.preferences.addons["cycles"].preferences.get_devices()
+    bpy.context.preferences.addons["cycles"].preferences.compute_device_type = "CUDA"
+
 
 def init_scene() -> None:
     """Resets the scene to a clean state.
@@ -78,16 +70,16 @@ def init_scene() -> None:
     # delete all the images
     for image in bpy.data.images:
         bpy.data.images.remove(image, do_unlink=True)
-        
+
 
 def init_camera():
-    cam = bpy.data.objects.new('Camera', bpy.data.cameras.new('Camera'))
+    cam = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
     bpy.context.collection.objects.link(cam)
     bpy.context.scene.camera = cam
     cam.data.sensor_height = cam.data.sensor_width = 32
-    cam_constraint = cam.constraints.new(type='TRACK_TO')
-    cam_constraint.track_axis = 'TRACK_NEGATIVE_Z'
-    cam_constraint.up_axis = 'UP_Y'
+    cam_constraint = cam.constraints.new(type="TRACK_TO")
+    cam_constraint.track_axis = "TRACK_NEGATIVE_Z"
+    cam_constraint.up_axis = "UP_Y"
     cam_empty = bpy.data.objects.new("Empty", None)
     cam_empty.location = (0, 0, 0)
     bpy.context.scene.collection.objects.link(cam_empty)
@@ -100,20 +92,20 @@ def init_uniform_lighting():
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.select_by_type(type="LIGHT")
     bpy.ops.object.delete()
-    
+
     # Create environment light
     if bpy.context.scene.world is None:
         world = bpy.data.worlds.new("World")
         bpy.context.scene.world = world
     else:
         world = bpy.context.scene.world
-        
+
     # Enabling nodes
     world.use_nodes = True
     node_tree = world.node_tree
     nodes = node_tree.nodes
     links = node_tree.links
-    
+
     # Remove default nodes
     for node in nodes:
         nodes.remove(node)
@@ -131,32 +123,32 @@ def init_random_lighting(camera_dir: np.ndarray) -> None:
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.object.select_by_type(type="LIGHT")
     bpy.ops.object.delete()
-    
+
     # Create environment light
     if bpy.context.scene.world is None:
         world = bpy.data.worlds.new("World")
         bpy.context.scene.world = world
     else:
         world = bpy.context.scene.world
-        
+
     # Enabling nodes
     world.use_nodes = True
     node_tree = world.node_tree
     nodes = node_tree.nodes
     links = node_tree.links
-    
+
     # Remove default nodes
     for node in nodes:
         nodes.remove(node)
-    
+
     # Random place lights
     num_lights = np.random.randint(1, 4)
     total_strength = 1.5
     for i in range(num_lights):
         new_light = bpy.data.objects.new(f"Light_{i}", bpy.data.lights.new(f"Light_{i}", type="POINT"))
         bpy.context.collection.objects.link(new_light)
-        
-        new_light_distance = 1 / np.random.uniform(1/100, 1/10)
+
+        new_light_distance = 1 / np.random.uniform(1 / 100, 1 / 10)
         new_light_dir = np.random.randn(3)
         new_light_dir[2] += 0.6
         new_light_dir = new_light_dir / np.linalg.norm(new_light_dir)
@@ -166,12 +158,12 @@ def init_random_lighting(camera_dir: np.ndarray) -> None:
         new_light_strength = np.sqrt(np.random.uniform(0.01, 1)) * new_light_max_energy
         new_light_camera_strength = new_light_camera_strength_ratio * new_light_strength
         total_strength -= new_light_camera_strength
-        
+
         new_light.location = (new_light_location[0], new_light_location[1], new_light_location[2])
         new_light.data.color = (1.0, 1.0, 1.0)
         new_light.data.energy = new_light_strength * new_light_distance**2 * 31.4
         new_light.data.shadow_soft_size = np.random.uniform(0.1, 0.1 * new_light_distance)
-        
+
     # Create background node
     bg_node = nodes.new(type="ShaderNodeBackground")
     bg_node.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
@@ -217,10 +209,10 @@ def load_object(object_path: str) -> None:
     if file_extension == "blend":
         import_function(directory=object_path, link=False)
     elif file_extension in {"glb", "gltf"}:
-        import_function(filepath=object_path, merge_vertices=True, import_shading='NORMALS')
+        import_function(filepath=object_path, merge_vertices=True, import_shading="NORMALS")
     else:
         import_function(filepath=object_path)
-        
+
 
 def delete_invisible_objects() -> None:
     """Deletes all invisible objects in the scene.
@@ -252,8 +244,8 @@ def unhide_all_objects() -> None:
     """
     for obj in bpy.context.scene.objects:
         obj.hide_set(False)
-        
-        
+
+
 def convert_to_meshes() -> None:
     """Converts all objects in the scene to meshes.
 
@@ -265,8 +257,8 @@ def convert_to_meshes() -> None:
     for obj in bpy.context.scene.objects:
         obj.select_set(True)
     bpy.ops.object.convert(target="MESH")
-    
-        
+
+
 def triangulate_meshes() -> None:
     """Triangulates all meshes in the scene.
 
@@ -284,7 +276,7 @@ def triangulate_meshes() -> None:
     bpy.ops.mesh.quads_convert_to_tris(quad_method="BEAUTY", ngon_method="BEAUTY")
     bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.object.select_all(action="DESELECT")
-    
+
 
 def scene_bbox() -> Tuple[Vector, Vector]:
     """Returns the bounding box of the scene.
@@ -345,7 +337,7 @@ def normalize_scene() -> Tuple[float, Vector]:
     offset = -(bbox_min + bbox_max) / 2
     scene.matrix_world.translation += offset
     bpy.ops.object.select_all(action="DESELECT")
-    
+
     return scale, offset
 
 
@@ -369,17 +361,17 @@ def main(arg):
     else:
         init_scene()
         load_object(arg.object)
-    print('[INFO] Scene initialized.')
-    
+    print("[INFO] Scene initialized.")
+
     # normalize scene
     scale, offset = normalize_scene()
-    print('[INFO] Scene normalized.')
-    
+    print("[INFO] Scene normalized.")
+
     # Initialize camera and lighting
     cam = init_camera()
     init_uniform_lighting()
-    print('[INFO] Camera and lighting initialized.')
-        
+    print("[INFO] Camera and lighting initialized.")
+
     # ============= Render conditional views =============
     init_render(engine=arg.engine, resolution=arg.cond_resolution)
     # Create a list of views
@@ -387,51 +379,44 @@ def main(arg):
         "aabb": [[-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]],
         "scale": scale,
         "offset": [offset.x, offset.y, offset.z],
-        "frames": []
+        "frames": [],
     }
     views = json.loads(arg.cond_views)
     for i, view in enumerate(views):
-        cam_dir = np.array([
-            np.cos(view['yaw']) * np.cos(view['pitch']),
-            np.sin(view['yaw']) * np.cos(view['pitch']),
-            np.sin(view['pitch'])
-        ])
-        init_random_lighting(cam_dir)
-        cam.location = (
-            view['radius'] * cam_dir[0],
-            view['radius'] * cam_dir[1],
-            view['radius'] * cam_dir[2]
+        cam_dir = np.array(
+            [np.cos(view["yaw"]) * np.cos(view["pitch"]), np.sin(view["yaw"]) * np.cos(view["pitch"]), np.sin(view["pitch"])]
         )
-        cam.data.lens = 16 / np.tan(view['fov'] / 2)
-        
-        bpy.context.scene.render.filepath = os.path.join(arg.cond_output_folder, f'{i:03d}.png')
-            
+        init_random_lighting(cam_dir)
+        cam.location = (view["radius"] * cam_dir[0], view["radius"] * cam_dir[1], view["radius"] * cam_dir[2])
+        cam.data.lens = 16 / np.tan(view["fov"] / 2)
+
+        bpy.context.scene.render.filepath = os.path.join(arg.cond_output_folder, f"{i:03d}.png")
+
         # Render the scene
         bpy.ops.render.render(write_still=True)
         bpy.context.view_layer.update()
-            
+
         # Save camera parameters
-        metadata = {
-            "file_path": f'{i:03d}.png',
-            "camera_angle_x": view['fov'],
-            "transform_matrix": get_transform_matrix(cam)
-        }
+        metadata = {"file_path": f"{i:03d}.png", "camera_angle_x": view["fov"], "transform_matrix": get_transform_matrix(cam)}
         to_export["frames"].append(metadata)
-    
+
     # Save the camera parameters
-    with open(os.path.join(arg.cond_output_folder, 'transforms.json'), 'w') as f:
+    with open(os.path.join(arg.cond_output_folder, "transforms.json"), "w") as f:
         json.dump(to_export, f, indent=4)
 
-        
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
-    parser.add_argument('--object', type=str, help='Path to the 3D model file to be rendered.')
-    parser.add_argument('--cond_views', type=str, help='JSON string of views. Contains a list of {yaw, pitch, radius, fov} object.')
-    parser.add_argument('--cond_output_folder', type=str, default='/tmp', help='The path the output will be dumped to.')
-    parser.add_argument('--cond_resolution', type=int, default=1024, help='Resolution of the conditional images.')
-    parser.add_argument('--engine', type=str, default='CYCLES', help='Blender internal engine for rendering. E.g. CYCLES, BLENDER_EEVEE, ...')
-    argv = sys.argv[sys.argv.index("--") + 1:]
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Renders given obj file by rotation a camera around it.")
+    parser.add_argument("--object", type=str, help="Path to the 3D model file to be rendered.")
+    parser.add_argument(
+        "--cond_views", type=str, help="JSON string of views. Contains a list of {yaw, pitch, radius, fov} object."
+    )
+    parser.add_argument("--cond_output_folder", type=str, default="/tmp", help="The path the output will be dumped to.")
+    parser.add_argument("--cond_resolution", type=int, default=1024, help="Resolution of the conditional images.")
+    parser.add_argument(
+        "--engine", type=str, default="CYCLES", help="Blender internal engine for rendering. E.g. CYCLES, BLENDER_EEVEE, ..."
+    )
+    argv = sys.argv[sys.argv.index("--") + 1 :]
     args = parser.parse_args(argv)
 
     main(args)
-    

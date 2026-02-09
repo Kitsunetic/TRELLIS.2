@@ -15,7 +15,7 @@ class ClassifierFreeGuidanceSamplerMixin:
             pred_pos = super()._inference_model(model, x_t, t, cond, **kwargs)
             pred_neg = super()._inference_model(model, x_t, t, neg_cond, **kwargs)
             pred = guidance_strength * pred_pos + (1 - guidance_strength) * pred_neg
-            
+
             # CFG rescale
             if guidance_rescale > 0:
                 x_0_pos = self._pred_to_xstart(x_t, t, pred_pos)
@@ -25,5 +25,5 @@ class ClassifierFreeGuidanceSamplerMixin:
                 x_0_rescaled = x_0_cfg * (std_pos / std_cfg)
                 x_0 = guidance_rescale * x_0_rescaled + (1 - guidance_rescale) * x_0_cfg
                 pred = self._xstart_to_pred(x_t, t, x_0)
-                
+
             return pred

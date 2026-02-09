@@ -10,7 +10,7 @@ from ..modules import sparse as sp
 from ..modules.sparse.transformer import ModulatedSparseTransformerCrossBlock
 from .sparse_structure_flow import TimestepEmbedder
 from .sparse_elastic_mixin import SparseTransformerElasticMixin
-    
+
 
 class SLatFlowModel(nn.Module):
     def __init__(
@@ -26,10 +26,10 @@ class SLatFlowModel(nn.Module):
         mlp_ratio: float = 4,
         pe_mode: Literal["ape", "rope"] = "ape",
         rope_freq: Tuple[float, float] = (1.0, 10000.0),
-        dtype: str = 'float32',
+        dtype: str = "float32",
         use_checkpoint: bool = False,
         share_mod: bool = False,
-        initialization: str = 'vanilla',
+        initialization: str = "vanilla",
         qk_rms_norm: bool = False,
         qk_rms_norm_cross: bool = False,
     ):
@@ -52,33 +52,32 @@ class SLatFlowModel(nn.Module):
 
         self.t_embedder = TimestepEmbedder(model_channels)
         if share_mod:
-            self.adaLN_modulation = nn.Sequential(
-                nn.SiLU(),
-                nn.Linear(model_channels, 6 * model_channels, bias=True)
-            )
+            self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(model_channels, 6 * model_channels, bias=True))
 
         if pe_mode == "ape":
             self.pos_embedder = AbsolutePositionEmbedder(model_channels)
 
         self.input_layer = sp.SparseLinear(in_channels, model_channels)
-            
-        self.blocks = nn.ModuleList([
-            ModulatedSparseTransformerCrossBlock(
-                model_channels,
-                cond_channels,
-                num_heads=self.num_heads,
-                mlp_ratio=self.mlp_ratio,
-                attn_mode='full',
-                use_checkpoint=self.use_checkpoint,
-                use_rope=(pe_mode == "rope"),
-                rope_freq=rope_freq,
-                share_mod=self.share_mod,
-                qk_rms_norm=self.qk_rms_norm,
-                qk_rms_norm_cross=self.qk_rms_norm_cross,
-            )
-            for _ in range(num_blocks)
-        ])
-            
+
+        self.blocks = nn.ModuleList(
+            [
+                ModulatedSparseTransformerCrossBlock(
+                    model_channels,
+                    cond_channels,
+                    num_heads=self.num_heads,
+                    mlp_ratio=self.mlp_ratio,
+                    attn_mode="full",
+                    use_checkpoint=self.use_checkpoint,
+                    use_rope=(pe_mode == "rope"),
+                    rope_freq=rope_freq,
+                    share_mod=self.share_mod,
+                    qk_rms_norm=self.qk_rms_norm,
+                    qk_rms_norm_cross=self.qk_rms_norm_cross,
+                )
+                for _ in range(num_blocks)
+            ]
+        )
+
         self.out_layer = sp.SparseLinear(model_channels, out_channels)
 
         self.initialize_weights()
@@ -99,13 +98,14 @@ class SLatFlowModel(nn.Module):
         self.blocks.apply(partial(convert_module_to, dtype=dtype))
 
     def initialize_weights(self) -> None:
-        if self.initialization == 'vanilla':
+        if self.initialization == "vanilla":
             # Initialize transformer layers:
             def _basic_init(module):
                 if isinstance(module, nn.Linear):
                     torch.nn.init.xavier_uniform_(module.weight)
                     if module.bias is not None:
                         nn.init.constant_(module.bias, 0)
+
             self.apply(_basic_init)
 
             # Initialize timestep embedding MLP:
@@ -124,35 +124,37 @@ class SLatFlowModel(nn.Module):
             # Zero-out output layers:
             nn.init.constant_(self.out_layer.weight, 0)
             nn.init.constant_(self.out_layer.bias, 0)
-            
-        elif self.initialization == 'scaled':
+
+        elif self.initialization == "scaled":
             # Initialize transformer layers:
             def _basic_init(module):
                 if isinstance(module, nn.Linear):
                     torch.nn.init.normal_(module.weight, std=np.sqrt(2.0 / (5.0 * self.model_channels)))
                     if module.bias is not None:
                         nn.init.constant_(module.bias, 0)
+
             self.apply(_basic_init)
-            
+
             # Scaled init for to_out and ffn2
             def _scaled_init(module):
                 if isinstance(module, nn.Linear):
                     torch.nn.init.normal_(module.weight, std=1.0 / np.sqrt(5 * self.num_blocks * self.model_channels))
                     if module.bias is not None:
                         nn.init.constant_(module.bias, 0)
+
             for block in self.blocks:
                 block.self_attn.to_out.apply(_scaled_init)
                 block.cross_attn.to_out.apply(_scaled_init)
                 block.mlp.mlp[2].apply(_scaled_init)
-            
+
             # Initialize input layer to make the initial representation have variance 1
             nn.init.normal_(self.input_layer.weight, std=1.0 / np.sqrt(self.in_channels))
             nn.init.zeros_(self.input_layer.bias)
-            
+
             # Initialize timestep embedding MLP:
             nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
             nn.init.normal_(self.t_embedder.mlp[2].weight, std=0.02)
-            
+
             # Zero-out adaLN modulation layers in DiT blocks:
             if self.share_mod:
                 nn.init.constant_(self.adaLN_modulation[-1].weight, 0)
@@ -204,4 +206,5 @@ class ElasticSLatFlowModel(SparseTransformerElasticMixin, SLatFlowModel):
     SLat Flow Model with elastic memory management.
     Used for training with low VRAM.
     """
+
     pass

@@ -1,15 +1,16 @@
 import importlib
 
 __attributes = {
-    'Mesh': 'mesh',
-    'Voxel': 'voxel',
-    'MeshWithVoxel': 'mesh',
-    'MeshWithPbrMaterial': 'mesh',
+    "Mesh": "mesh",
+    "Voxel": "voxel",
+    "MeshWithVoxel": "mesh",
+    "MeshWithPbrMaterial": "mesh",
 }
 
 __submodules = []
 
 __all__ = list(__attributes.keys()) + __submodules
+
 
 def __getattr__(name):
     if name not in globals():
@@ -26,6 +27,6 @@ def __getattr__(name):
 
 
 # For Pylance
-if __name__ == '__main__':
+if __name__ == "__main__":
     from .mesh import Mesh, MeshWithVoxel, MeshWithPbrMaterial
     from .voxel import Voxel

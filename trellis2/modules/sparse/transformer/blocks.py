@@ -25,6 +25,7 @@ class SparseTransformerBlock(nn.Module):
     """
     Sparse Transformer block (MSA + FFN).
     """
+
     def __init__(
         self,
         channels: int,
@@ -35,7 +36,7 @@ class SparseTransformerBlock(nn.Module):
         shift_window: Optional[Tuple[int, int, int]] = None,
         use_checkpoint: bool = False,
         use_rope: bool = False,
-        rope_freq: Tuple[int, int] = (1.0, 10000.0), 
+        rope_freq: Tuple[int, int] = (1.0, 10000.0),
         qk_rms_norm: bool = False,
         qkv_bias: bool = True,
         ln_affine: bool = False,
@@ -80,6 +81,7 @@ class SparseTransformerCrossBlock(nn.Module):
     """
     Sparse Transformer cross-attention block (MSA + MCA + FFN).
     """
+
     def __init__(
         self,
         channels: int,

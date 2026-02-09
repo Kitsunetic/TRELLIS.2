@@ -8,6 +8,7 @@ class Pipeline:
     """
     A base class for pipelines.
     """
+
     def __init__(
         self,
         models: dict[str, nn.Module] = None,
@@ -25,20 +26,22 @@ class Pipeline:
         """
         import os
         import json
+
         is_local = os.path.exists(f"{path}/{config_file}")
 
         if is_local:
             config_file = f"{path}/{config_file}"
         else:
             from huggingface_hub import hf_hub_download
+
             config_file = hf_hub_download(path, config_file)
 
-        with open(config_file, 'r') as f:
-            args = json.load(f)['args']
+        with open(config_file, "r") as f:
+            args = json.load(f)["args"]
 
         _models = {}
-        for k, v in args['models'].items():
-            if hasattr(cls, 'model_names_to_load') and k not in cls.model_names_to_load:
+        for k, v in args["models"].items():
+            if hasattr(cls, "model_names_to_load") and k not in cls.model_names_to_load:
                 continue
             try:
                 _models[k] = models.from_pretrained(f"{path}/{v}")
@@ -51,13 +54,13 @@ class Pipeline:
 
     @property
     def device(self) -> torch.device:
-        if hasattr(self, '_device'):
+        if hasattr(self, "_device"):
             return self._device
         for model in self.models.values():
-            if hasattr(model, 'device'):
+            if hasattr(model, "device"):
                 return model.device
         for model in self.models.values():
-            if hasattr(model, 'parameters'):
+            if hasattr(model, "parameters"):
                 return next(model.parameters()).device
         raise RuntimeError("No device found.")
 

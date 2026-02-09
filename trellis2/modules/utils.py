@@ -76,12 +76,12 @@ def manual_cast(tensor, dtype):
 
 def str_to_dtype(dtype_str: str):
     return {
-        'f16': torch.float16,
-        'fp16': torch.float16,
-        'float16': torch.float16,
-        'bf16': torch.bfloat16,
-        'bfloat16': torch.bfloat16,
-        'f32': torch.float32,
-        'fp32': torch.float32,
-        'float32': torch.float32,
+        "f16": torch.float16,
+        "fp16": torch.float16,
+        "float16": torch.float16,
+        "bf16": torch.bfloat16,
+        "bfloat16": torch.bfloat16,
+        "f32": torch.float32,
+        "fp32": torch.float32,
+        "float32": torch.float32,
     }[dtype_str]

@@ -35,7 +35,7 @@ def to_glb(
     """
     Convert an extracted mesh to a GLB file.
     Performs cleaning, optional remeshing, UV unwrapping, and texture baking from a volume.
-    
+
     Args:
         vertices: (N, 3) tensor of vertex positions
         faces: (M, 3) tensor of vertex indices
@@ -85,13 +85,13 @@ def to_glb(
         if isinstance(grid_size, np.ndarray):
             grid_size = torch.tensor(grid_size, dtype=torch.int32, device=coords.device)
         voxel_size = (aabb[1] - aabb[0]) / grid_size
-    
+
     # Assertions for dimensions
     assert isinstance(voxel_size, torch.Tensor)
     assert voxel_size.dim() == 1 and voxel_size.size(0) == 3
     assert isinstance(grid_size, torch.Tensor)
     assert grid_size.dim() == 1 and grid_size.size(0) == 3
-    
+
     if use_tqdm:
         pbar = tqdm(total=6, desc="Extracting GLB")
     if verbose:
@@ -100,11 +100,11 @@ def to_glb(
     # Move data to GPU
     vertices = vertices.cuda()
     faces = faces.cuda()
-    
+
     # Initialize CUDA mesh handler
     mesh = cumesh.CuMesh()
     mesh.init(vertices, faces)
-    
+
     # --- Initial Mesh Cleaning ---
     # Fills holes as much as we can before processing
     mesh.fill_holes(max_hole_perimeter=3e-2)
@@ -113,30 +113,30 @@ def to_glb(
     vertices, faces = mesh.read()
     if use_tqdm:
         pbar.update(1)
-        
+
     # Build BVH for the current mesh to guide remeshing
     if use_tqdm:
         pbar.set_description("Building BVH")
     if verbose:
-        print(f"Building BVH for current mesh...", end='', flush=True)
+        print(f"Building BVH for current mesh...", end="", flush=True)
     bvh = cumesh.cuBVH(vertices, faces)
     if use_tqdm:
         pbar.update(1)
     if verbose:
         print("Done")
-        
+
     if use_tqdm:
         pbar.set_description("Cleaning mesh")
     if verbose:
         print("Cleaning mesh...")
-    
+
     # --- Branch 1: Standard Pipeline (Simplification & Cleaning) ---
     if not remesh:
         # Step 1: Aggressive simplification (3x target)
         mesh.simplify(decimation_target * 3, verbose=verbose)
         if verbose:
             print(f"After inital simplification: {mesh.num_vertices} vertices, {mesh.num_faces} faces")
-        
+
         # Step 2: Clean up topology (duplicates, non-manifolds, isolated parts)
         mesh.remove_duplicate_faces()
         mesh.repair_non_manifold_edges()
@@ -144,12 +144,12 @@ def to_glb(
         mesh.fill_holes(max_hole_perimeter=3e-2)
         if verbose:
             print(f"After initial cleanup: {mesh.num_vertices} vertices, {mesh.num_faces} faces")
-            
+
         # Step 3: Final simplification to target count
         mesh.simplify(decimation_target, verbose=verbose)
         if verbose:
             print(f"After final simplification: {mesh.num_vertices} vertices, {mesh.num_faces} faces")
-        
+
         # Step 4: Final Cleanup loop
         mesh.remove_duplicate_faces()
         mesh.repair_non_manifold_edges()
@@ -157,47 +157,49 @@ def to_glb(
         mesh.fill_holes(max_hole_perimeter=3e-2)
         if verbose:
             print(f"After final cleanup: {mesh.num_vertices} vertices, {mesh.num_faces} faces")
-            
+
         # Step 5: Unify face orientations
         mesh.unify_face_orientations()
-    
+
     # --- Branch 2: Remeshing Pipeline ---
     else:
         center = aabb.mean(dim=0)
         scale = (aabb[1] - aabb[0]).max().item()
         resolution = grid_size.max().item()
-        
+
         # Perform Dual Contouring remeshing (rebuilds topology)
-        mesh.init(*cumesh.remeshing.remesh_narrow_band_dc(
-            vertices, faces,
-            center = center,
-            scale = (resolution + 3 * remesh_band) / resolution * scale,
-            resolution = resolution,
-            band = remesh_band,
-            project_back = remesh_project, # Snaps vertices back to original surface
-            verbose = verbose,
-            bvh = bvh,
-        ))
+        mesh.init(
+            *cumesh.remeshing.remesh_narrow_band_dc(
+                vertices,
+                faces,
+                center=center,
+                scale=(resolution + 3 * remesh_band) / resolution * scale,
+                resolution=resolution,
+                band=remesh_band,
+                project_back=remesh_project,  # Snaps vertices back to original surface
+                verbose=verbose,
+                bvh=bvh,
+            )
+        )
         if verbose:
             print(f"After remeshing: {mesh.num_vertices} vertices, {mesh.num_faces} faces")
-        
+
         # Simplify and clean the remeshed result (similar logic to above)
         mesh.simplify(decimation_target, verbose=verbose)
         if verbose:
             print(f"After simplifying: {mesh.num_vertices} vertices, {mesh.num_faces} faces")
-    
+
     if use_tqdm:
         pbar.update(1)
     if verbose:
         print("Done")
-        
-    
+
     # --- UV Parameterization ---
     if use_tqdm:
         pbar.set_description("Parameterizing new mesh")
     if verbose:
         print("Parameterizing new mesh...")
-    
+
     out_vertices, out_faces, out_uvs, out_vmaps = mesh.uv_unwrap(
         compute_charts_kwargs={
             "threshold_cone_half_angle_rad": mesh_cluster_threshold_cone_half_angle_rad,
@@ -214,83 +216,87 @@ def to_glb(
     out_vmaps = out_vmaps.cuda()
     mesh.compute_vertex_normals()
     out_normals = mesh.read_vertex_normals()[out_vmaps]
-    
+
     if use_tqdm:
         pbar.update(1)
     if verbose:
         print("Done")
-    
+
     # --- Texture Baking (Attribute Sampling) ---
     if use_tqdm:
         pbar.set_description("Sampling attributes")
     if verbose:
-        print("Sampling attributes...", end='', flush=True)
-        
+        print("Sampling attributes...", end="", flush=True)
+
     # Setup differentiable rasterizer context
     ctx = dr.RasterizeCudaContext()
     # Prepare UV coordinates for rasterization (rendering in UV space)
-    uvs_rast = torch.cat([out_uvs * 2 - 1, torch.zeros_like(out_uvs[:, :1]), torch.ones_like(out_uvs[:, :1])], dim=-1).unsqueeze(0)
-    rast = torch.zeros((1, texture_size, texture_size, 4), device='cuda', dtype=torch.float32)
-    
+    uvs_rast = torch.cat(
+        [out_uvs * 2 - 1, torch.zeros_like(out_uvs[:, :1]), torch.ones_like(out_uvs[:, :1])], dim=-1
+    ).unsqueeze(0)
+    rast = torch.zeros((1, texture_size, texture_size, 4), device="cuda", dtype=torch.float32)
+
     # Rasterize in chunks to save memory
     for i in range(0, out_faces.shape[0], 100000):
         rast_chunk, _ = dr.rasterize(
-            ctx, uvs_rast, out_faces[i:i+100000],
+            ctx,
+            uvs_rast,
+            out_faces[i : i + 100000],
             resolution=[texture_size, texture_size],
         )
         mask_chunk = rast_chunk[..., 3:4] > 0
-        rast_chunk[..., 3:4] += i # Store face ID in alpha channel
+        rast_chunk[..., 3:4] += i  # Store face ID in alpha channel
         rast = torch.where(mask_chunk, rast_chunk, rast)
-    
+
     # Mask of valid pixels in texture
     mask = rast[0, ..., 3] > 0
-    
+
     # Interpolate 3D positions in UV space (finding 3D coord for every texel)
     pos = dr.interpolate(out_vertices.unsqueeze(0), rast, out_faces)[0][0]
     valid_pos = pos[mask]
-    
+
     # Map these positions back to the *original* high-res mesh to get accurate attributes
     # This corrects geometric errors introduced by simplification/remeshing
     _, face_id, uvw = bvh.unsigned_distance(valid_pos, return_uvw=True)
-    orig_tri_verts = vertices[faces[face_id.long()]] # (N_new, 3, 3)
+    orig_tri_verts = vertices[faces[face_id.long()]]  # (N_new, 3, 3)
     valid_pos = (orig_tri_verts * uvw.unsqueeze(-1)).sum(dim=1)
-    
+
     # Trilinear sampling from the attribute volume (Color, Material props)
-    attrs = torch.zeros(texture_size, texture_size, attr_volume.shape[1], device='cuda')
+    attrs = torch.zeros(texture_size, texture_size, attr_volume.shape[1], device="cuda")
     attrs[mask] = grid_sample_3d(
         attr_volume,
         torch.cat([torch.zeros_like(coords[:, :1]), coords], dim=-1),
         shape=torch.Size([1, attr_volume.shape[1], *grid_size.tolist()]),
         grid=((valid_pos - aabb[0]) / voxel_size).reshape(1, -1, 3),
-        mode='trilinear',
+        mode="trilinear",
     )
     if use_tqdm:
         pbar.update(1)
     if verbose:
         print("Done")
-    
+
     # --- Texture Post-Processing & Material Construction ---
     if use_tqdm:
         pbar.set_description("Finalizing mesh")
     if verbose:
-        print("Finalizing mesh...", end='', flush=True)
-    
+        print("Finalizing mesh...", end="", flush=True)
+
     mask = mask.cpu().numpy()
-    
+
     # Extract channels based on layout (BaseColor, Metallic, Roughness, Alpha)
-    base_color = np.clip(attrs[..., attr_layout['base_color']].cpu().numpy() * 255, 0, 255).astype(np.uint8)
-    metallic = np.clip(attrs[..., attr_layout['metallic']].cpu().numpy() * 255, 0, 255).astype(np.uint8)
-    roughness = np.clip(attrs[..., attr_layout['roughness']].cpu().numpy() * 255, 0, 255).astype(np.uint8)
-    alpha = np.clip(attrs[..., attr_layout['alpha']].cpu().numpy() * 255, 0, 255).astype(np.uint8)
-    alpha_mode = 'OPAQUE'
-    
+    base_color = np.clip(attrs[..., attr_layout["base_color"]].cpu().numpy() * 255, 0, 255).astype(np.uint8)
+    metallic = np.clip(attrs[..., attr_layout["metallic"]].cpu().numpy() * 255, 0, 255).astype(np.uint8)
+    roughness = np.clip(attrs[..., attr_layout["roughness"]].cpu().numpy() * 255, 0, 255).astype(np.uint8)
+    alpha = np.clip(attrs[..., attr_layout["alpha"]].cpu().numpy() * 255, 0, 255).astype(np.uint8)
+    alpha_mode = "OPAQUE"
+
     # Inpainting: fill gaps (dilation) to prevent black seams at UV boundaries
     mask_inv = (~mask).astype(np.uint8)
     base_color = cv2.inpaint(base_color, mask_inv, 3, cv2.INPAINT_TELEA)
     metallic = cv2.inpaint(metallic, mask_inv, 1, cv2.INPAINT_TELEA)[..., None]
     roughness = cv2.inpaint(roughness, mask_inv, 1, cv2.INPAINT_TELEA)[..., None]
     alpha = cv2.inpaint(alpha, mask_inv, 1, cv2.INPAINT_TELEA)[..., None]
-    
+
     # Create PBR material
     # Standard PBR packs Metallic and Roughness into Blue and Green channels
     material = trimesh.visual.material.PBRMaterial(
@@ -302,30 +308,30 @@ def to_glb(
         alphaMode=alpha_mode,
         doubleSided=True if not remesh else False,
     )
-    
+
     # --- Coordinate System Conversion & Final Object ---
     vertices_np = out_vertices.cpu().numpy()
     faces_np = out_faces.cpu().numpy()
     uvs_np = out_uvs.cpu().numpy()
     normals_np = out_normals.cpu().numpy()
-    
+
     # Swap Y and Z axes, invert Y (common conversion for GLB compatibility)
     vertices_np[:, 1], vertices_np[:, 2] = vertices_np[:, 2], -vertices_np[:, 1]
     normals_np[:, 1], normals_np[:, 2] = normals_np[:, 2], -normals_np[:, 1]
-    uvs_np[:, 1] = 1 - uvs_np[:, 1] # Flip UV V-coordinate
-    
+    uvs_np[:, 1] = 1 - uvs_np[:, 1]  # Flip UV V-coordinate
+
     textured_mesh = trimesh.Trimesh(
         vertices=vertices_np,
         faces=faces_np,
         vertex_normals=normals_np,
         process=False,
-        visual=trimesh.visual.TextureVisuals(uv=uvs_np, material=material)
+        visual=trimesh.visual.TextureVisuals(uv=uvs_np, material=material),
     )
-    
+
     if use_tqdm:
         pbar.update(1)
         pbar.close()
     if verbose:
         print("Done")
-    
+
     return textured_mesh

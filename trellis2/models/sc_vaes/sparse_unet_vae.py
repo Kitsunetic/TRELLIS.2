@@ -15,7 +15,7 @@ class SparseResBlock3d(nn.Module):
         out_channels: Optional[int] = None,
         downsample: bool = False,
         upsample: bool = False,
-        resample_mode: Literal['nearest', 'spatial2channel'] = 'nearest',
+        resample_mode: Literal["nearest", "spatial2channel"] = "nearest",
         use_checkpoint: bool = False,
     ):
         super().__init__()
@@ -25,35 +25,39 @@ class SparseResBlock3d(nn.Module):
         self.upsample = upsample
         self.resample_mode = resample_mode
         self.use_checkpoint = use_checkpoint
-        
+
         assert not (downsample and upsample), "Cannot downsample and upsample at the same time"
 
         self.norm1 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
         self.norm2 = LayerNorm32(self.out_channels, elementwise_affine=False, eps=1e-6)
-        if resample_mode == 'nearest':
+        if resample_mode == "nearest":
             self.conv1 = sp.SparseConv3d(channels, self.out_channels, 3)
-        elif resample_mode =='spatial2channel' and not self.downsample:
+        elif resample_mode == "spatial2channel" and not self.downsample:
             self.conv1 = sp.SparseConv3d(channels, self.out_channels * 8, 3)
-        elif resample_mode =='spatial2channel' and self.downsample:
+        elif resample_mode == "spatial2channel" and self.downsample:
             self.conv1 = sp.SparseConv3d(channels, self.out_channels // 8, 3)
         self.conv2 = zero_module(sp.SparseConv3d(self.out_channels, self.out_channels, 3))
-        if resample_mode == 'nearest':
-            self.skip_connection = sp.SparseLinear(channels, self.out_channels) if channels != self.out_channels else nn.Identity()
-        elif resample_mode =='spatial2channel' and self.downsample:
-            self.skip_connection = lambda x: x.replace(x.feats.reshape(x.feats.shape[0], out_channels, channels * 8 // out_channels).mean(dim=-1))
-        elif resample_mode =='spatial2channel' and not self.downsample:
+        if resample_mode == "nearest":
+            self.skip_connection = (
+                sp.SparseLinear(channels, self.out_channels) if channels != self.out_channels else nn.Identity()
+            )
+        elif resample_mode == "spatial2channel" and self.downsample:
+            self.skip_connection = lambda x: x.replace(
+                x.feats.reshape(x.feats.shape[0], out_channels, channels * 8 // out_channels).mean(dim=-1)
+            )
+        elif resample_mode == "spatial2channel" and not self.downsample:
             self.skip_connection = lambda x: x.replace(x.feats.repeat_interleave(out_channels // (channels // 8), dim=1))
         self.updown = None
         if self.downsample:
-            if resample_mode == 'nearest':
+            if resample_mode == "nearest":
                 self.updown = sp.SparseDownsample(2)
-            elif resample_mode =='spatial2channel':
+            elif resample_mode == "spatial2channel":
                 self.updown = sp.SparseSpatial2Channel(2)
         elif self.upsample:
             self.to_subdiv = sp.SparseLinear(channels, 8)
-            if resample_mode == 'nearest':
+            if resample_mode == "nearest":
                 self.updown = sp.SparseUpsample(2)
-            elif resample_mode =='spatial2channel':
+            elif resample_mode == "spatial2channel":
                 self.updown = sp.SparseChannel2Spatial(2)
 
     def _updown(self, x: sp.SparseTensor, subdiv: sp.SparseTensor = None) -> sp.SparseTensor:
@@ -69,11 +73,11 @@ class SparseResBlock3d(nn.Module):
             subdiv = self.to_subdiv(x)
         h = x.replace(self.norm1(x.feats))
         h = h.replace(F.silu(h.feats))
-        if self.resample_mode == 'spatial2channel':
+        if self.resample_mode == "spatial2channel":
             h = self.conv1(h)
         h = self._updown(h, subdiv)
         x = self._updown(x, subdiv)
-        if self.resample_mode == 'nearest':
+        if self.resample_mode == "nearest":
             h = self.conv1(h)
         h = h.replace(self.norm2(h.feats))
         h = h.replace(F.silu(h.feats))
@@ -82,7 +86,7 @@ class SparseResBlock3d(nn.Module):
         if self.upsample:
             return h, subdiv
         return h
-    
+
     def forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
         if self.use_checkpoint:
             return torch.utils.checkpoint.checkpoint(self._forward, x, use_reentrant=False)
@@ -101,7 +105,7 @@ class SparseResBlockDownsample3d(nn.Module):
         self.channels = channels
         self.out_channels = out_channels or channels
         self.use_checkpoint = use_checkpoint
-        
+
         self.norm1 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
         self.norm2 = LayerNorm32(self.out_channels, elementwise_affine=False, eps=1e-6)
         self.conv1 = sp.SparseConv3d(channels, self.out_channels, 3)
@@ -120,7 +124,7 @@ class SparseResBlockDownsample3d(nn.Module):
         h = self.conv2(h)
         h = h + self.skip_connection(x)
         return h
-    
+
     def forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
         if self.use_checkpoint:
             return torch.utils.checkpoint.checkpoint(self._forward, x, use_reentrant=False)
@@ -141,7 +145,7 @@ class SparseResBlockUpsample3d(nn.Module):
         self.out_channels = out_channels or channels
         self.use_checkpoint = use_checkpoint
         self.pred_subdiv = pred_subdiv
-        
+
         self.norm1 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
         self.norm2 = LayerNorm32(self.out_channels, elementwise_affine=False, eps=1e-6)
         self.conv1 = sp.SparseConv3d(channels, self.out_channels, 3)
@@ -168,7 +172,7 @@ class SparseResBlockUpsample3d(nn.Module):
             return h, subdiv
         else:
             return h
-    
+
     def forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
         if self.use_checkpoint:
             return torch.utils.checkpoint.checkpoint(self._forward, x, use_reentrant=False)
@@ -187,12 +191,14 @@ class SparseResBlockS2C3d(nn.Module):
         self.channels = channels
         self.out_channels = out_channels or channels
         self.use_checkpoint = use_checkpoint
-        
+
         self.norm1 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
         self.norm2 = LayerNorm32(self.out_channels, elementwise_affine=False, eps=1e-6)
         self.conv1 = sp.SparseConv3d(channels, self.out_channels // 8, 3)
         self.conv2 = zero_module(sp.SparseConv3d(self.out_channels, self.out_channels, 3))
-        self.skip_connection = lambda x: x.replace(x.feats.reshape(x.feats.shape[0], out_channels, channels * 8 // out_channels).mean(dim=-1))
+        self.skip_connection = lambda x: x.replace(
+            x.feats.reshape(x.feats.shape[0], out_channels, channels * 8 // out_channels).mean(dim=-1)
+        )
         self.updown = sp.SparseSpatial2Channel(2)
 
     def _forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
@@ -206,7 +212,7 @@ class SparseResBlockS2C3d(nn.Module):
         h = self.conv2(h)
         h = h + self.skip_connection(x)
         return h
-    
+
     def forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
         if self.use_checkpoint:
             return torch.utils.checkpoint.checkpoint(self._forward, x, use_reentrant=False)
@@ -227,7 +233,7 @@ class SparseResBlockC2S3d(nn.Module):
         self.out_channels = out_channels or channels
         self.use_checkpoint = use_checkpoint
         self.pred_subdiv = pred_subdiv
-        
+
         self.norm1 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
         self.norm2 = LayerNorm32(self.out_channels, elementwise_affine=False, eps=1e-6)
         self.conv1 = sp.SparseConv3d(channels, self.out_channels * 8, 3)
@@ -254,14 +260,14 @@ class SparseResBlockC2S3d(nn.Module):
             return h, subdiv
         else:
             return h
-    
+
     def forward(self, x: sp.SparseTensor, subdiv: sp.SparseTensor = None) -> sp.SparseTensor:
         if self.use_checkpoint:
             return torch.utils.checkpoint.checkpoint(self._forward, x, subdiv, use_reentrant=False)
         else:
             return self._forward(x, subdiv)
-        
-    
+
+
 class SparseConvNeXtBlock3d(nn.Module):
     def __init__(
         self,
@@ -272,7 +278,7 @@ class SparseConvNeXtBlock3d(nn.Module):
         super().__init__()
         self.channels = channels
         self.use_checkpoint = use_checkpoint
-        
+
         self.norm = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
         self.conv = sp.SparseConv3d(channels, channels, 3)
         self.mlp = nn.Sequential(
@@ -286,7 +292,7 @@ class SparseConvNeXtBlock3d(nn.Module):
         h = h.replace(self.norm(h.feats))
         h = h.replace(self.mlp(h.feats))
         return h + x
-    
+
     def forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
         if self.use_checkpoint:
             return torch.utils.checkpoint.checkpoint(self._forward, x, use_reentrant=False)
@@ -298,6 +304,7 @@ class SparseUnetVaeEncoder(nn.Module):
     """
     Sparse Swin Transformer Unet VAE model.
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -318,7 +325,7 @@ class SparseUnetVaeEncoder(nn.Module):
 
         self.input_layer = sp.SparseLinear(in_channels, model_channels[0])
         self.to_latent = sp.SparseLinear(model_channels[-1], 2 * latent_channels)
-        
+
         self.blocks = nn.ModuleList([])
         for i in range(len(num_blocks)):
             self.blocks.append(nn.ModuleList([]))
@@ -333,11 +340,11 @@ class SparseUnetVaeEncoder(nn.Module):
                 self.blocks[-1].append(
                     globals()[down_block_type[i]](
                         model_channels[i],
-                        model_channels[i+1],
+                        model_channels[i + 1],
                         **block_args[i],
                     )
                 )
-                
+
         self.initialize_weights()
         if use_fp16:
             self.convert_to_fp16()
@@ -368,6 +375,7 @@ class SparseUnetVaeEncoder(nn.Module):
                 torch.nn.init.xavier_uniform_(module.weight)
                 if module.bias is not None:
                     nn.init.constant_(module.bias, 0)
+
         self.apply(_basic_init)
 
     def forward(self, x: sp.SparseTensor, sample_posterior=False, return_raw=False):
@@ -379,7 +387,7 @@ class SparseUnetVaeEncoder(nn.Module):
         h = h.type(x.dtype)
         h = h.replace(F.layer_norm(h.feats, h.feats.shape[-1:]))
         h = self.to_latent(h)
-        
+
         # Sample from the posterior distribution
         mean, logvar = h.feats.chunk(2, dim=-1)
         if sample_posterior:
@@ -388,17 +396,18 @@ class SparseUnetVaeEncoder(nn.Module):
         else:
             z = mean
         z = h.replace(z)
-            
+
         if return_raw:
             return z, mean, logvar
         else:
             return z
-    
-    
+
+
 class SparseUnetVaeDecoder(nn.Module):
     """
     Sparse Swin Transformer Unet VAE model.
     """
+
     def __init__(
         self,
         out_channels: int,
@@ -419,10 +428,10 @@ class SparseUnetVaeDecoder(nn.Module):
         self.pred_subdiv = pred_subdiv
         self.dtype = torch.float16 if use_fp16 else torch.float32
         self.low_vram = False
-        
+
         self.output_layer = sp.SparseLinear(model_channels[-1], out_channels)
         self.from_latent = sp.SparseLinear(latent_channels, model_channels[0])
-        
+
         self.blocks = nn.ModuleList([])
         for i in range(len(num_blocks)):
             self.blocks.append(nn.ModuleList([]))
@@ -437,16 +446,16 @@ class SparseUnetVaeDecoder(nn.Module):
                 self.blocks[-1].append(
                     globals()[up_block_type[i]](
                         model_channels[i],
-                        model_channels[i+1],
+                        model_channels[i + 1],
                         pred_subdiv=pred_subdiv,
                         **block_args[i],
                     )
                 )
-                    
+
         self.initialize_weights()
         if use_fp16:
             self.convert_to_fp16()
-            
+
     @property
     def device(self) -> torch.device:
         """
@@ -473,12 +482,19 @@ class SparseUnetVaeDecoder(nn.Module):
                 torch.nn.init.xavier_uniform_(module.weight)
                 if module.bias is not None:
                     nn.init.constant_(module.bias, 0)
+
         self.apply(_basic_init)
 
-    def forward(self, x: sp.SparseTensor, guide_subs: Optional[List[sp.SparseTensor]] = None, return_subs: bool = False) -> sp.SparseTensor:
-        assert guide_subs is None or self.pred_subdiv == False, "Only decoders with pred_subdiv=False can be used with guide_subs"
-        assert return_subs == False or self.pred_subdiv == True, "Only decoders with pred_subdiv=True can be used with return_subs"
-        
+    def forward(
+        self, x: sp.SparseTensor, guide_subs: Optional[List[sp.SparseTensor]] = None, return_subs: bool = False
+    ) -> sp.SparseTensor:
+        assert (
+            guide_subs is None or self.pred_subdiv == False
+        ), "Only decoders with pred_subdiv=False can be used with guide_subs"
+        assert (
+            return_subs == False or self.pred_subdiv == True
+        ), "Only decoders with pred_subdiv=True can be used with return_subs"
+
         h = self.from_latent(x)
         h = h.type(self.dtype)
         subs_gt = []
@@ -488,7 +504,7 @@ class SparseUnetVaeDecoder(nn.Module):
                 if i < len(self.blocks) - 1 and j == len(res) - 1:
                     if self.pred_subdiv:
                         if self.training:
-                            subs_gt.append(h.get_spatial_cache('subdivision'))
+                            subs_gt.append(h.get_spatial_cache("subdivision"))
                         h, sub = block(h)
                         subs.append(sub)
                     else:
@@ -505,10 +521,10 @@ class SparseUnetVaeDecoder(nn.Module):
                 return h, subs
             else:
                 return h
-    
+
     def upsample(self, x: sp.SparseTensor, upsample_times: int) -> torch.Tensor:
         assert self.pred_subdiv == True, "Only decoders with pred_subdiv=True can be used with upsampling"
-        
+
         h = self.from_latent(x)
         h = h.type(self.dtype)
         for i, res in enumerate(self.blocks):
@@ -519,4 +535,3 @@ class SparseUnetVaeDecoder(nn.Module):
                     h, sub = block(h)
                 else:
                     h = block(h)
-       

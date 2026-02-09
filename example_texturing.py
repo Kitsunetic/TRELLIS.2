@@ -1,4 +1,5 @@
 import os
+
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"  # Can save GPU memory
 import trimesh
 from PIL import Image

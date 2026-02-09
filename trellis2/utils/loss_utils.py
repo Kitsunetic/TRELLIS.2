@@ -7,7 +7,7 @@ from lpips import LPIPS
 
 def smooth_l1_loss(pred, target, beta=1.0):
     diff = torch.abs(pred - target)
-    loss = torch.where(diff < beta, 0.5 * diff ** 2 / beta, diff - 0.5 * beta)
+    loss = torch.where(diff < beta, 0.5 * diff**2 / beta, diff - 0.5 * beta)
     return loss.mean()
 
 
@@ -20,7 +20,7 @@ def l2_loss(network_output, gt):
 
 
 def gaussian(window_size, sigma):
-    gauss = torch.Tensor([exp(-(x - window_size // 2) ** 2 / float(2 * sigma ** 2)) for x in range(window_size)])
+    gauss = torch.Tensor([exp(-((x - window_size // 2) ** 2) / float(2 * sigma**2)) for x in range(window_size)])
     return gauss / gauss.sum()
 
 
@@ -46,6 +46,7 @@ def ssim(img1, img2, window_size=11, size_average=True):
 
     return _ssim(img1, img2, window, window_size, channel, size_average)
 
+
 def _ssim(img1, img2, window, window_size, channel, size_average=True):
     mu1 = F.conv2d(img1, window, padding=window_size // 2, groups=channel)
     mu2 = F.conv2d(img2, window, padding=window_size // 2, groups=channel)
@@ -58,8 +59,8 @@ def _ssim(img1, img2, window, window_size, channel, size_average=True):
     sigma2_sq = F.conv2d(img2 * img2, window, padding=window_size // 2, groups=channel) - mu2_sq
     sigma12 = F.conv2d(img1 * img2, window, padding=window_size // 2, groups=channel) - mu1_mu2
 
-    C1 = 0.01 ** 2
-    C2 = 0.03 ** 2
+    C1 = 0.01**2
+    C2 = 0.03**2
 
     ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
 
@@ -70,10 +71,12 @@ def _ssim(img1, img2, window, window_size, channel, size_average=True):
 
 
 loss_fn_vgg = None
+
+
 def lpips(img1, img2, value_range=(0, 1)):
     global loss_fn_vgg
     if loss_fn_vgg is None:
-        loss_fn_vgg = LPIPS(net='vgg').cuda().eval()
+        loss_fn_vgg = LPIPS(net="vgg").cuda().eval()
     # normalize to [-1, 1]
     img1 = (img1 - value_range[0]) / (value_range[1] - value_range[0]) * 2 - 1
     img2 = (img2 - value_range[0]) / (value_range[1] - value_range[0]) * 2 - 1

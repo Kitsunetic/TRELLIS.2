@@ -6,36 +6,32 @@ from flex_gemm.ops.grid_sample import grid_sample_3d
 
 
 class Mesh:
-    def __init__(self,
-        vertices,
-        faces,
-        vertex_attrs=None
-    ):
+    def __init__(self, vertices, faces, vertex_attrs=None):
         self.vertices = vertices.float()
         self.faces = faces.int()
         self.vertex_attrs = vertex_attrs
-        
+
     @property
     def device(self):
         return self.vertices.device
-        
+
     def to(self, device, non_blocking=False):
         return Mesh(
             self.vertices.to(device, non_blocking=non_blocking),
             self.faces.to(device, non_blocking=non_blocking),
             self.vertex_attrs.to(device, non_blocking=non_blocking) if self.vertex_attrs is not None else None,
         )
-        
+
     def cuda(self, non_blocking=False):
-        return self.to('cuda', non_blocking=non_blocking)
-        
+        return self.to("cuda", non_blocking=non_blocking)
+
     def cpu(self):
-        return self.to('cpu')
-    
+        return self.to("cpu")
+
     def fill_holes(self, max_hole_perimeter=3e-2):
         vertices = self.vertices.cuda()
         faces = self.faces.cuda()
-        
+
         mesh = cumesh.CuMesh()
         mesh.init(vertices, faces)
         mesh.get_edges()
@@ -52,31 +48,31 @@ class Mesh:
             return
         mesh.fill_holes(max_hole_perimeter=max_hole_perimeter)
         new_vertices, new_faces = mesh.read()
-        
+
         self.vertices = new_vertices.to(self.device)
         self.faces = new_faces.to(self.device)
-        
+
     def remove_faces(self, face_mask: torch.Tensor):
         vertices = self.vertices.cuda()
         faces = self.faces.cuda()
-        
+
         mesh = cumesh.CuMesh()
         mesh.init(vertices, faces)
         mesh.remove_faces(face_mask)
         new_vertices, new_faces = mesh.read()
-        
+
         self.vertices = new_vertices.to(self.device)
         self.faces = new_faces.to(self.device)
-        
-    def simplify(self, target=1000000, verbose: bool=False, options: dict={}):
+
+    def simplify(self, target=1000000, verbose: bool = False, options: dict = {}):
         vertices = self.vertices.cuda()
         faces = self.faces.cuda()
-        
+
         mesh = cumesh.CuMesh()
         mesh.init(vertices, faces)
         mesh.simplify(target, verbose=verbose, options=options)
         new_vertices, new_faces = mesh.read()
-        
+
         self.vertices = new_vertices.to(self.device)
         self.faces = new_faces.to(self.device)
 
@@ -103,7 +99,7 @@ class Texture:
         self,
         image: torch.Tensor,
         filter_mode: TextureFilterMode = TextureFilterMode.LINEAR,
-        wrap_mode: TextureWrapMode = TextureWrapMode.REPEAT
+        wrap_mode: TextureWrapMode = TextureWrapMode.REPEAT,
     ):
         self.image = image
         self.filter_mode = filter_mode
@@ -144,11 +140,17 @@ class PbrMaterial:
 
     def to(self, device, non_blocking=False):
         return PbrMaterial(
-            base_color_texture=self.base_color_texture.to(device, non_blocking=non_blocking) if self.base_color_texture is not None else None,
+            base_color_texture=(
+                self.base_color_texture.to(device, non_blocking=non_blocking) if self.base_color_texture is not None else None
+            ),
             base_color_factor=self.base_color_factor.to(device, non_blocking=non_blocking),
-            metallic_texture=self.metallic_texture.to(device, non_blocking=non_blocking) if self.metallic_texture is not None else None,
+            metallic_texture=(
+                self.metallic_texture.to(device, non_blocking=non_blocking) if self.metallic_texture is not None else None
+            ),
             metallic_factor=self.metallic_factor,
-            roughness_texture=self.roughness_texture.to(device, non_blocking=non_blocking) if self.roughness_texture is not None else None,
+            roughness_texture=(
+                self.roughness_texture.to(device, non_blocking=non_blocking) if self.roughness_texture is not None else None
+            ),
             roughness_factor=self.roughness_factor,
             alpha_texture=self.alpha_texture.to(device, non_blocking=non_blocking) if self.alpha_texture is not None else None,
             alpha_factor=self.alpha_factor,
@@ -158,7 +160,8 @@ class PbrMaterial:
 
 
 class MeshWithPbrMaterial(Mesh):
-    def __init__(self,
+    def __init__(
+        self,
         vertices,
         faces,
         material_ids,
@@ -167,14 +170,14 @@ class MeshWithPbrMaterial(Mesh):
     ):
         self.vertices = vertices.float()
         self.faces = faces.int()
-        self.material_ids = material_ids    # [M]
-        self.uv_coords = uv_coords          # [M, 3, 2]
+        self.material_ids = material_ids  # [M]
+        self.uv_coords = uv_coords  # [M, 3, 2]
         self.materials = materials
         self.layout = {
-            'base_color': slice(0, 3),
-            'metallic': slice(3, 4),
-            'roughness': slice(4, 5),
-            'alpha': slice(5, 6),
+            "base_color": slice(0, 3),
+            "metallic": slice(3, 4),
+            "roughness": slice(4, 5),
+            "alpha": slice(5, 6),
         }
 
     def to(self, device, non_blocking=False):
@@ -188,7 +191,8 @@ class MeshWithPbrMaterial(Mesh):
 
 
 class MeshWithVoxel(Mesh, Voxel):
-    def __init__(self,
+    def __init__(
+        self,
         vertices: torch.Tensor,
         faces: torch.Tensor,
         origin: list,
@@ -218,7 +222,7 @@ class MeshWithVoxel(Mesh, Voxel):
             self.voxel_shape,
             self.layout,
         )
-        
+
     def query_attrs(self, xyz):
         grid = ((xyz - self.origin) / self.voxel_size).reshape(1, -1, 3)
         vertex_attrs = grid_sample_3d(
@@ -226,9 +230,9 @@ class MeshWithVoxel(Mesh, Voxel):
             torch.cat([torch.zeros_like(self.coords[..., :1]), self.coords], dim=-1),
             self.voxel_shape,
             grid,
-            mode='trilinear'
+            mode="trilinear",
         )[0]
         return vertex_attrs
-        
+
     def query_vertex_attrs(self):
         return self.query_attrs(self.vertices)
