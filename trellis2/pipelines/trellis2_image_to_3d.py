@@ -261,6 +261,9 @@ class Trellis2ImageTo3DPipeline(Pipeline):
             feats=torch.randn(coords.shape[0], flow_model.in_channels).to(self.device),
             coords=coords,
         )
+
+        # SpaceControl
+
         sampler_params = {**self.shape_slat_sampler_params, **sampler_params}
         if self.low_vram:
             flow_model.to(self.device)
@@ -553,6 +556,7 @@ class Trellis2ImageTo3DPipeline(Pipeline):
         cond_1024 = self.get_cond([image], 1024) if pipeline_type != "512" else None
         ss_res = {"512": 32, "1024": 64, "1024_cascade": 32, "1536_cascade": 32}[pipeline_type]
         coords = self.sample_sparse_structure(cond_512, ss_res, num_samples, sparse_structure_sampler_params)
+
         if pipeline_type == "512":
             shape_slat = self.sample_shape_slat(
                 cond_512, self.models["shape_slat_flow_model_512"], coords, shape_slat_sampler_params
@@ -561,6 +565,7 @@ class Trellis2ImageTo3DPipeline(Pipeline):
                 cond_512, self.models["tex_slat_flow_model_512"], shape_slat, tex_slat_sampler_params
             )
             res = 512
+
         elif pipeline_type == "1024":
             shape_slat = self.sample_shape_slat(
                 cond_1024, self.models["shape_slat_flow_model_1024"], coords, shape_slat_sampler_params
@@ -569,6 +574,7 @@ class Trellis2ImageTo3DPipeline(Pipeline):
                 cond_1024, self.models["tex_slat_flow_model_1024"], shape_slat, tex_slat_sampler_params
             )
             res = 1024
+
         elif pipeline_type == "1024_cascade":
             shape_slat, res = self.sample_shape_slat_cascade(
                 cond_512,
@@ -584,6 +590,7 @@ class Trellis2ImageTo3DPipeline(Pipeline):
             tex_slat = self.sample_tex_slat(
                 cond_1024, self.models["tex_slat_flow_model_1024"], shape_slat, tex_slat_sampler_params
             )
+
         elif pipeline_type == "1536_cascade":
             shape_slat, res = self.sample_shape_slat_cascade(
                 cond_512,
@@ -599,6 +606,7 @@ class Trellis2ImageTo3DPipeline(Pipeline):
             tex_slat = self.sample_tex_slat(
                 cond_1024, self.models["tex_slat_flow_model_1024"], shape_slat, tex_slat_sampler_params
             )
+
         torch.cuda.empty_cache()
         out_mesh = self.decode_latent(shape_slat, tex_slat, res)
         if return_latent:

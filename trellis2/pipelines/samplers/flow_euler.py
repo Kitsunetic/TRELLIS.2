@@ -119,6 +119,53 @@ class FlowEulerSampler(Sampler):
         return ret
 
 
+class SpaceControlFlowEulerSampler(FlowEulerSampler):
+    @torch.no_grad()
+    def sample(
+        self,
+        model,
+        noise,
+        cond: Optional[Any] = None,
+        steps: int = 50,
+        rescale_t: float = 1.0,
+        verbose: bool = True,
+        tqdm_desc: str = "Sampling",
+        **kwargs
+    ):
+        """
+        Generate samples from the model using Euler method.
+
+        Args:
+            model: The model to sample from.
+            noise: The initial noise tensor.
+            cond: conditional information.
+            steps: The number of steps to sample.
+            rescale_t: The rescale factor for t.
+            verbose: If True, show a progress bar.
+            tqdm_desc: A customized tqdm desc.
+            **kwargs: Additional arguments for model_inference.
+
+        Returns:
+            a dict containing the following
+            - 'samples': the model samples.
+            - 'pred_x_t': a list of prediction of x_t.
+            - 'pred_x_0': a list of prediction of x_0.
+        """
+        sample = noise
+        t_seq = np.linspace(1, 0, steps + 1)
+        t_seq = rescale_t * t_seq / (1 + (rescale_t - 1) * t_seq)
+        t_seq = t_seq.tolist()
+        t_pairs = list((t_seq[i], t_seq[i + 1]) for i in range(steps))
+        ret = edict({"samples": None, "pred_x_t": [], "pred_x_0": []})
+        for t, t_prev in tqdm(t_pairs, desc=tqdm_desc, disable=not verbose):
+            out = self.sample_once(model, sample, t, t_prev, cond, **kwargs)
+            sample = out.pred_x_prev
+            ret.pred_x_t.append(out.pred_x_prev)
+            ret.pred_x_0.append(out.pred_x_0)
+        ret.samples = sample
+        return ret
+
+
 class FlowEulerCfgSampler(ClassifierFreeGuidanceSamplerMixin, FlowEulerSampler):
     """
     Generate samples from a flow-matching model using Euler sampling with classifier-free guidance.

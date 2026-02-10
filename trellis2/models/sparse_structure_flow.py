@@ -249,6 +249,3 @@ class SparseStructureFlowModel(nn.Module):
         h = h.permute(0, 2, 1).view(h.shape[0], h.shape[2], *[self.resolution] * 3).contiguous()
 
         return h
-
-
-# TODO 여기에 space control을 적용해보자
