@@ -3,6 +3,7 @@ import importlib
 __attributes = {
     "Trellis2ImageTo3DPipeline": "trellis2_image_to_3d",
     "Trellis2TexturingPipeline": "trellis2_texturing",
+    "SpaceControlPipeline": "spacecontrol",
 }
 
 __submodules = ["samplers", "rembg"]
@@ -31,8 +32,8 @@ def from_pretrained(path: str):
     Args:
         path: The path to the model. Can be either local path or a Hugging Face model name.
     """
-    import os
     import json
+    import os
 
     is_local = os.path.exists(f"{path}/pipeline.json")
 
@@ -50,6 +51,7 @@ def from_pretrained(path: str):
 
 # For PyLance
 if __name__ == "__main__":
-    from . import samplers, rembg
+    from . import rembg, samplers
+    from .spacecontrol import SpaceControlPipeline
     from .trellis2_image_to_3d import Trellis2ImageTo3DPipeline
     from .trellis2_texturing import Trellis2TexturingPipeline

@@ -8,7 +8,7 @@ from .classifier_free_guidance_mixin import ClassifierFreeGuidanceSamplerMixin
 from .guidance_interval_mixin import GuidanceIntervalSamplerMixin
 
 
-class FlowEulerSampler(Sampler):
+class OriginalFlowEulerSampler(Sampler):
     """
     Generate samples from a flow-matching model using Euler sampling.
 
@@ -119,7 +119,7 @@ class FlowEulerSampler(Sampler):
         return ret
 
 
-class SpaceControlFlowEulerSampler(FlowEulerSampler):
+class FlowEulerSampler(OriginalFlowEulerSampler):
     @torch.no_grad()
     def sample(
         self,
@@ -133,35 +133,42 @@ class SpaceControlFlowEulerSampler(FlowEulerSampler):
         **kwargs
     ):
         """
-        Generate samples from the model using Euler method.
-
-        Args:
-            model: The model to sample from.
-            noise: The initial noise tensor.
-            cond: conditional information.
-            steps: The number of steps to sample.
-            rescale_t: The rescale factor for t.
-            verbose: If True, show a progress bar.
-            tqdm_desc: A customized tqdm desc.
-            **kwargs: Additional arguments for model_inference.
-
-        Returns:
-            a dict containing the following
-            - 'samples': the model samples.
-            - 'pred_x_t': a list of prediction of x_t.
-            - 'pred_x_0': a list of prediction of x_0.
+        Generate samples from the model using Euler method (Modified for SpaceControl).
         """
         sample = noise
         t_seq = np.linspace(1, 0, steps + 1)
         t_seq = rescale_t * t_seq / (1 + (rescale_t - 1) * t_seq)
         t_seq = t_seq.tolist()
-        t_pairs = list((t_seq[i], t_seq[i + 1]) for i in range(steps))
+
+        # =================================================================
+        # [SpaceControl 로직 완벽 수정본]
+        # **cond로 언패킹되어 넘어온 control 데이터를 kwargs에서 빼내어(pop)
+        # 하위 PyTorch 모델(forward)로 알 수 없는 인자가 흘러가지 않도록 완벽히 차단합니다.
+        # =================================================================
+        control_latent = kwargs.pop("control", None)
+
+        start_step_idx = 0
+        if control_latent is not None:
+            # tau 값 역시 kwargs에서 안전하게 빼냅니다.
+            tau_0 = kwargs.pop("space_control_tau", 6)
+            start_step_idx = min(max(tau_0, 0), steps - 1)
+
+            t_0 = t_seq[start_step_idx]
+
+            # Rectified Flow Forward Equation (노이즈와 뼈대 형태 섞기)
+            sample = t_0 * noise + (1.0 - t_0) * control_latent
+
+        t_pairs = list((t_seq[i], t_seq[i + 1]) for i in range(start_step_idx, steps))
+        # =================================================================
+
         ret = edict({"samples": None, "pred_x_t": [], "pred_x_0": []})
         for t, t_prev in tqdm(t_pairs, desc=tqdm_desc, disable=not verbose):
+            # 이제 kwargs 안에는 'control'이 없으므로 모델이 에러를 뱉지 않습니다!
             out = self.sample_once(model, sample, t, t_prev, cond, **kwargs)
             sample = out.pred_x_prev
             ret.pred_x_t.append(out.pred_x_prev)
             ret.pred_x_0.append(out.pred_x_0)
+
         ret.samples = sample
         return ret
 
