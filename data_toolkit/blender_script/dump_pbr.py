@@ -1,12 +1,20 @@
-import argparse, sys, os, math, io
+import argparse
+import io
+import math
+import os
+import pickle
+import sys
 from typing import *
-import bpy
-import bmesh
-from mathutils import Vector, Matrix
+
 import numpy as np
 from PIL import Image
-import pickle
 
+# isort: off
+import bpy
+import bmesh
+from mathutils import Matrix, Vector
+
+# isort: on
 
 """=============== BLENDER ==============="""
 

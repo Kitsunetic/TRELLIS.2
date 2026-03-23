@@ -1,11 +1,15 @@
-import argparse, sys, os, math, re, glob
-from typing import *
-import bpy
-from mathutils import Vector, Matrix
-import numpy as np
-import json
+import argparse
 import glob
+import json
+import math
+import os
+import re
+import sys
+from typing import *
 
+import bpy
+import numpy as np
+from mathutils import Matrix, Vector
 
 """=============== BLENDER ==============="""
 
