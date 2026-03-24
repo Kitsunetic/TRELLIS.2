@@ -56,7 +56,7 @@ def main(args):
         )
     )
 
-    # 2. Load Pipeline (이제 패치된 로컬 경로에서 불러옵니다)
+    # 2. Load Pipeline
     print("Loading Trellis2 SpaceControl Pipeline...")
     pipeline = SpaceControlPipeline.from_pretrained(local_model_path)
     pipeline.cuda()
@@ -69,7 +69,7 @@ def main(args):
     spatial_control_path = args.control
 
     # 4. Run Pipeline with SpaceControl
-    print("Generating 3D model...")
+    print(f"Generating 3D model with tau={args.tau}...")
     mesh = pipeline.run(
         image=image,
         sparse_structure_sampler_params={
@@ -80,13 +80,25 @@ def main(args):
 
     mesh.simplify(16777216)  # nvdiffrast limit
 
+    # ---------------------------------------------------------
+    # [추가됨] 출력 디렉토리 생성 및 파일명 자동 구성
+    # ---------------------------------------------------------
+    os.makedirs(args.out_dir, exist_ok=True)
+
+    # 입력 이미지 경로에서 파일명만 추출 (예: 'assets/shoe2.jpg' -> 'shoe2')
+    image_basename = os.path.splitext(os.path.basename(args.image))[0]
+
+    video_out = os.path.join(args.out_dir, f"{image_basename}-tau{args.tau}.mp4")
+    mesh_out = os.path.join(args.out_dir, f"{image_basename}-tau{args.tau}.glb")
+    # ---------------------------------------------------------
+
     # 5. Render Video
-    print(f"Rendering video to {args.video_out}...")
+    print(f"Rendering video to {video_out}...")
     video = render_utils.make_pbr_vis_frames(render_utils.render_video(mesh, envmap=envmap))
-    imageio.mimsave(args.video_out, video, fps=15)
+    imageio.mimsave(video_out, video, fps=15)
 
     # 6. Export to GLB
-    print(f"Exporting model to {args.mesh_out}...")
+    print(f"Exporting model to {mesh_out}...")
     glb = o_voxel.postprocess.to_glb(
         vertices=mesh.vertices,
         faces=mesh.faces,
@@ -102,7 +114,7 @@ def main(args):
         remesh_project=0,
         verbose=True,
     )
-    glb.export(args.mesh_out, extension_webp=True)
+    glb.export(mesh_out, extension_webp=True)
     print("✨ Done!")
 
 
@@ -112,8 +124,7 @@ if __name__ == "__main__":
     parser.add_argument("--image", type=str, required=True, help="Path to the input image")
     parser.add_argument("--control", type=str, required=True, help="Path to the spatial control mesh")
     parser.add_argument("--tau", type=int, default=6, help="Strength of spatial control (typically 1~10, default 6)")
-    parser.add_argument("--video_out", type=str, default="sample_spacecontrol.mp4", help="Output video path")
-    parser.add_argument("--mesh_out", type=str, default="sample_spacecontrol.glb", help="Output GLB mesh path")
+    parser.add_argument("--out_dir", type=str, default="outputs", help="Directory to save the generated files")
 
     args = parser.parse_args()
     main(args)
