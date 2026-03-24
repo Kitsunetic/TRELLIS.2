@@ -60,14 +60,15 @@ python example_spacecontrol.py \
   --tau 6
 ```
 
+
 ```sh
-runit -g 0 --tau 0 2 4 6 8 -- \
-python example_spacecontrol.py \
-  --image assets/shoe3-no_lace-rembg.png \
-  --control assets/last_normalized.ply \
-  --video_out results/spacecontrol/output_shoe_video-tau{tau}.mp4 \
-  --mesh_out results/spacecontrol/output_shoe_model-tau{tau}.glb \
-  --tau {tau}
+runit -n 2 --image \
+  shoe2-rembg.png shoe2-rembg.png shoe2-rembg.png shoe2-rembg.png \
+  shoe2-no_lace-rembg.png shoe2-no_lace-rembg.png shoe2-no_lace-rembg.png shoe2-no_lace-rembg.png \
+  shoe3-no_lace-rembg.png shoe3-no_lace-rembg.png shoe3-no_lace-rembg.png shoe3-no_lace-rembg.png \
+  shoe4_rembg.png shoe4_rembg.png shoe4_rembg.png shoe4_rembg.png \
+  --tau 0 2 4 6 0 2 4 6 0 2 4 6 0 2 4 6 \
+-- python example_spacecontrol.py --image assets/{image} --control assets/last_normalized.ply --tau {tau} --out_dir results/spacecontrol
 ```
 
 
