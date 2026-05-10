@@ -1,8 +1,8 @@
 from typing import *
-import torch
-from .. import VarLenTensor
-from .. import config
 
+import torch
+
+from trellis2.modules.sparse import VarLenTensor, config
 
 __all__ = [
     "sparse_scaled_dot_product_attention",

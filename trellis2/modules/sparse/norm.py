@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from ..utils import manual_cast
-from . import VarLenTensor
-from . import config
+
+from trellis2.modules.sparse import VarLenTensor
+from trellis2.modules.utils import manual_cast
 
 __all__ = [
     "SparseGroupNorm",

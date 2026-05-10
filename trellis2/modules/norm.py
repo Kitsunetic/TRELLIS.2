@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from .utils import manual_cast
+
+from trellis2.modules.utils import manual_cast
 
 
 class LayerNorm32(nn.LayerNorm):

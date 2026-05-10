@@ -1,9 +1,11 @@
 from typing import *
+
 import torch
 import torch.nn as nn
-from ..attention import MultiHeadAttention
-from ..norm import LayerNorm32
-from .blocks import FeedForwardNet
+
+from trellis2.modules.attention import MultiHeadAttention
+from trellis2.modules.norm import LayerNorm32
+from trellis2.modules.transformer.blocks import FeedForwardNet
 
 
 class ModulatedTransformerBlock(nn.Module):

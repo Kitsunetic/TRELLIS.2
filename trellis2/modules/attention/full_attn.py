@@ -1,8 +1,9 @@
-from typing import *
-import torch
 import math
-from . import config
+from typing import *
 
+import torch
+
+from trellis2.modules.attention import config
 
 __all__ = [
     "scaled_dot_product_attention",

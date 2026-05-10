@@ -1,10 +1,12 @@
 from typing import *
+
 import torch
 import torch.nn as nn
-from ..basic import VarLenTensor, SparseTensor
-from ..attention import SparseMultiHeadAttention
-from ...norm import LayerNorm32
-from .blocks import SparseFeedForwardNet
+
+from trellis2.modules.norm import LayerNorm32
+from trellis2.modules.sparse.attention import SparseMultiHeadAttention
+from trellis2.modules.sparse.basic import SparseTensor, VarLenTensor
+from trellis2.modules.sparse.transformer.blocks import SparseFeedForwardNet
 
 
 class ModulatedSparseTransformerBlock(nn.Module):

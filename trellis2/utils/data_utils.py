@@ -1,9 +1,10 @@
-from typing import *
 import math
-import torch
+from typing import *
+
 import numpy as np
-from torch.utils.data import Sampler, Dataset, DataLoader, DistributedSampler
+import torch
 import torch.distributed as dist
+from torch.utils.data import DataLoader, Dataset, DistributedSampler, Sampler
 
 
 def recursive_to_device(

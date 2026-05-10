@@ -28,5 +28,5 @@ def __getattr__(name):
 
 # For Pylance
 if __name__ == "__main__":
-    from .mesh import Mesh, MeshWithVoxel, MeshWithPbrMaterial
-    from .voxel import Voxel
+    from trellis2.representations.mesh import Mesh, MeshWithPbrMaterial, MeshWithVoxel
+    from trellis2.representations.voxel import Voxel

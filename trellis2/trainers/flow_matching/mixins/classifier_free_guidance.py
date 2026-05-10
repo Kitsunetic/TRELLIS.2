@@ -1,7 +1,8 @@
-import torch
 import numpy as np
-from ....utils.general_utils import dict_foreach
-from ....pipelines import samplers
+import torch
+
+from trellis2.pipelines import samplers
+from trellis2.utils.general_utils import dict_foreach
 
 
 class ClassifierFreeGuidanceMixin:

@@ -1,26 +1,25 @@
-from abc import abstractmethod
-import os
-import time
-import json
 import copy
+import json
+import os
 import threading
-from functools import partial
+import time
+from abc import abstractmethod
 from contextlib import nullcontext
+from functools import partial
 
+import numpy as np
 import torch
 import torch.distributed as dist
-from torch.utils.data import DataLoader
 from torch.nn.parallel import DistributedDataParallel as DDP
-import numpy as np
-
-from torchvision import utils
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from torchvision import utils
 
-from .utils import *
-from ..utils.general_utils import *
-from ..utils.data_utils import recursive_to_device, cycle, ResumableSampler
-from ..utils.dist_utils import *
-from ..utils import grad_clip_utils, elastic_utils
+from trellis2.trainers.utils import *
+from trellis2.utils import elastic_utils, grad_clip_utils
+from trellis2.utils.data_utils import ResumableSampler, cycle, recursive_to_device
+from trellis2.utils.dist_utils import *
+from trellis2.utils.general_utils import *
 
 
 class BasicTrainer:

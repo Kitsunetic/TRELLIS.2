@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from easydict import EasyDict as edict
-from . import _C
+from o_voxel import _C
 
 
 def intrinsics_to_projection(

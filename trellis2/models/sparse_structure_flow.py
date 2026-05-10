@@ -1,12 +1,14 @@
-from typing import *
 from functools import partial
+from typing import *
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-from ..modules.utils import convert_module_to, manual_cast, str_to_dtype
-from ..modules.transformer import AbsolutePositionEmbedder, ModulatedTransformerCrossBlock
-from ..modules.attention import RotaryPositionEmbedder
+
+from trellis2.modules.attention import RotaryPositionEmbedder
+from trellis2.modules.transformer import AbsolutePositionEmbedder, ModulatedTransformerCrossBlock
+from trellis2.modules.utils import convert_module_to, manual_cast, str_to_dtype
 
 
 class TimestepEmbedder(nn.Module):

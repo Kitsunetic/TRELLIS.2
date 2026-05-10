@@ -8,8 +8,8 @@ import zlib
 import lzma
 import zstandard
 from concurrent.futures import ThreadPoolExecutor
-from ..serialize import encode_seq, decode_seq
-from .. import _C
+from o_voxel.serialize import encode_seq, decode_seq
+from o_voxel import _C
 
 
 __all__ = [

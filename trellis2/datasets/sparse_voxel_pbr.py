@@ -1,19 +1,27 @@
-import os
 import io
-from typing import Union
-import numpy as np
+import os
 import pickle
-import torch
-from PIL import Image
-import o_voxel
-import utils3d
-from .components import StandardDatasetBase
-from ..modules import sparse as sp
-from ..renderers import VoxelRenderer
-from ..representations import Voxel
-from ..representations.mesh import MeshWithPbrMaterial, TextureFilterMode, TextureWrapMode, AlphaMode, PbrMaterial, Texture
+from typing import Union
 
-from ..utils.data_utils import load_balanced_group_indices
+import numpy as np
+import o_voxel
+import torch
+import utils3d
+from PIL import Image
+
+from trellis2.datasets.components import StandardDatasetBase
+from trellis2.modules import sparse as sp
+from trellis2.renderers import VoxelRenderer
+from trellis2.representations import Voxel
+from trellis2.representations.mesh import (
+    AlphaMode,
+    MeshWithPbrMaterial,
+    PbrMaterial,
+    Texture,
+    TextureFilterMode,
+    TextureWrapMode,
+)
+from trellis2.utils.data_utils import load_balanced_group_indices
 
 
 def is_power_of_two(n: int) -> bool:

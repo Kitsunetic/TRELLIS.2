@@ -1,8 +1,8 @@
-import torch
-import torch.nn as nn
-from .. import SparseTensor
-from . import config
 import spconv.pytorch as spconv
+import torch
+
+from trellis2.modules.sparse import SparseTensor
+from trellis2.modules.sparse.conv import config
 
 
 def sparse_conv3d_init(

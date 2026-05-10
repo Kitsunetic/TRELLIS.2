@@ -1,13 +1,15 @@
-import os
 import json
+import os
 from typing import *
+
 import numpy as np
 import torch
-from .. import models
-from .components import ImageConditionedMixin
-from ..modules.sparse import SparseTensor
-from .structured_latent import SLatVisMixin, SLat
-from ..utils.render_utils import get_renderer, yaw_pitch_r_fov_to_extrinsics_intrinsics
+
+from trellis2 import models
+from trellis2.datasets.components import ImageConditionedMixin
+from trellis2.datasets.structured_latent import SLat, SLatVisMixin
+from trellis2.modules.sparse import SparseTensor
+from trellis2.utils.render_utils import get_renderer, yaw_pitch_r_fov_to_extrinsics_intrinsics
 
 
 class SLatShapeVisMixin(SLatVisMixin):

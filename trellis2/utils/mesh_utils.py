@@ -1,8 +1,7 @@
-from typing import Tuple, Dict
-import numpy as np
-from trimesh import grouping, util, remesh
-import struct
 import re
+import struct
+
+import numpy as np
 from plyfile import PlyData, PlyElement
 
 

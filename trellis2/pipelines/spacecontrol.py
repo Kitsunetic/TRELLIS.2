@@ -5,12 +5,13 @@ import torch
 import torch.nn as nn
 from PIL import Image
 
-from ..modules import image_feature_extractor
-from ..modules.sparse import SparseTensor
-from ..representations import Mesh, MeshWithVoxel
-from ..utils.spacecontrol import voxelize_sq_francis
-from . import rembg, samplers
-from .base import Pipeline
+from trellis2.modules import image_feature_extractor
+from trellis2.modules.sparse import SparseTensor
+from trellis2.pipelines import rembg, samplers
+from trellis2.pipelines.base import Pipeline
+from trellis2.pipelines.guidance import build_geometry_guidance
+from trellis2.representations import Mesh, MeshWithVoxel
+from trellis2.utils.spacecontrol import voxelize_sq_francis
 
 
 class SpaceControlPipeline(Pipeline):
@@ -81,6 +82,7 @@ class SpaceControlPipeline(Pipeline):
             "roughness": slice(4, 5),
             "alpha": slice(5, 6),
         }
+        self.last_guidance_metrics = None
         self._device = "cpu"
 
     @classmethod
@@ -123,6 +125,7 @@ class SpaceControlPipeline(Pipeline):
             "roughness": slice(4, 5),
             "alpha": slice(5, 6),
         }
+        pipeline.last_guidance_metrics = None
         pipeline._device = "cpu"
 
         return pipeline
@@ -218,22 +221,32 @@ class SpaceControlPipeline(Pipeline):
         in_channels = flow_model.in_channels
         noise = torch.randn(num_samples, in_channels, reso, reso, reso).to(self.device)
         sampler_params = {**self.sparse_structure_sampler_params, **sampler_params}
+        sampler = sampler_params.pop("_sampler_override", self.sparse_structure_sampler)
+        geometry_guidance = sampler_params.get("geometry_guidance")
+        self.last_guidance_metrics = None
+
+        decoder = self.models["sparse_structure_decoder"]
+        decoder_already_loaded = False
+        if self.low_vram and geometry_guidance is not None:
+            decoder.to(self.device)
+            decoder_already_loaded = True
         if self.low_vram:
             flow_model.to(self.device)
-        z_s = self.sparse_structure_sampler.sample(
+        sample_ret = sampler.sample(
             flow_model,
             noise,
             **cond,
             **sampler_params,
             verbose=True,
             tqdm_desc="Sampling sparse structure",
-        ).samples
+        )
+        z_s = sample_ret.samples
+        self.last_guidance_metrics = list(getattr(sample_ret, "guidance", [])) or None
         if self.low_vram:
             flow_model.cpu()
 
         # Decode sparse structure latent
-        decoder = self.models["sparse_structure_decoder"]
-        if self.low_vram:
+        if self.low_vram and not decoder_already_loaded:
             decoder.to(self.device)
         decoded = decoder(z_s) > 0
         if self.low_vram:
@@ -560,17 +573,65 @@ class SpaceControlPipeline(Pipeline):
         cond_512 = self.get_cond([image], 512)
         cond_1024 = self.get_cond([image], 1024) if pipeline_type != "512" else None
 
-        # ==========================================
-        # [추가됨] SpaceControl: Spatial Control 주입
-        # ==========================================
-        if "spatial_control_mesh_path" in sparse_structure_sampler_params:
-            spatial_control_latent = self.encode_spatial_control(
-                sparse_structure_sampler_params.pop("spatial_control_mesh_path")
-            )
+        sparse_structure_sampler_params = dict(sparse_structure_sampler_params)
+        spatial_control_path = sparse_structure_sampler_params.pop("spatial_control_mesh_path", None)
+        control_mode = sparse_structure_sampler_params.pop("control_mode", None)
+        guidance_type = sparse_structure_sampler_params.pop("guidance_type", "containment")
+
+        if control_mode is None:
+            control_mode = "spacecontrol" if spatial_control_path is not None else "none"
+        control_mode = control_mode.lower()
+        if control_mode not in {"none", "spacecontrol", "guidance", "both"}:
+            raise ValueError(f"Unsupported control_mode: {control_mode}")
+
+        use_spacecontrol = control_mode in {"spacecontrol", "both"}
+        use_guidance = control_mode in {"guidance", "both"}
+        if (use_spacecontrol or use_guidance) and spatial_control_path is None:
+            raise ValueError(f"control_mode={control_mode} requires spatial_control_mesh_path")
+
+        guidance_build_keys = {
+            "bce_weight",
+            "dice_weight",
+            "envelope_radius",
+            "interior_weight",
+            "contain_weight",
+            "outside_weight",
+            "shell_weight",
+            "bottom_weight",
+            "bottom_band_ratio",
+            "bottom_outer_margin",
+        }
+        guidance_build_kwargs = {}
+        for key in list(sparse_structure_sampler_params.keys()):
+            if key in guidance_build_keys:
+                guidance_build_kwargs[key] = sparse_structure_sampler_params.pop(key)
+
+        if use_spacecontrol:
+            spatial_control_latent = self.encode_spatial_control(spatial_control_path)
             cond_512["control"] = spatial_control_latent
             if cond_1024 is not None:
                 cond_1024["control"] = spatial_control_latent
-        # ==========================================
+
+        if use_guidance:
+            geometry_guidance = build_geometry_guidance(
+                guidance_type,
+                self,
+                spatial_control_path,
+                **guidance_build_kwargs,
+            )
+            sparse_structure_sampler_params["geometry_guidance"] = geometry_guidance
+            sparse_structure_sampler_params.setdefault("geometry_guidance_strength", 1.0)
+            sparse_structure_sampler_params.setdefault("geometry_guidance_interval", (0.5, 0.95))
+            sparse_structure_sampler_params.setdefault("geometry_guidance_schedule", "constant")
+            sparse_structure_sampler_params.setdefault("geometry_guidance_rescale", True)
+            sparse_structure_sampler_params.setdefault("geometry_grad_clip", 5.0)
+            sparse_structure_sampler_params.setdefault("geometry_guidance_cfg_mode", "cond_only")
+            if isinstance(self.sparse_structure_sampler, samplers.FlowEulerGeometryGuidanceSampler):
+                sparse_structure_sampler_params["_sampler_override"] = self.sparse_structure_sampler
+            else:
+                sparse_structure_sampler_params["_sampler_override"] = samplers.FlowEulerGeometryGuidanceSampler(
+                    sigma_min=self.sparse_structure_sampler.sigma_min
+                )
 
         ss_res = {"512": 32, "1024": 64, "1024_cascade": 32, "1536_cascade": 32}[pipeline_type]
         coords = self.sample_sparse_structure(cond_512, ss_res, num_samples, sparse_structure_sampler_params)

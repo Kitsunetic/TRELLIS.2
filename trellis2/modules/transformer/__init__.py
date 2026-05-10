@@ -1,2 +1,2 @@
-from .blocks import *
-from .modulated import *
+from trellis2.modules.transformer.blocks import *
+from trellis2.modules.transformer.modulated import *

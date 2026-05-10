@@ -1,7 +1,7 @@
 from typing import *
 import numpy as np
 import torch
-from .. import _C
+from o_voxel import _C
 
 __all__ = [
     "mesh_to_flexible_dual_grid",

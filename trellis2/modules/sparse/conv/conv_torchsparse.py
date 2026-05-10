@@ -1,7 +1,7 @@
 import torch
-import torch.nn as nn
-from .. import SparseTensor
 import torchsparse
+
+from trellis2.modules.sparse import SparseTensor
 
 
 def sparse_conv3d_init(

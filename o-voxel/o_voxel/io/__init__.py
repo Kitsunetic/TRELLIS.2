@@ -1,8 +1,8 @@
 from typing import Dict, Union
 import torch
-from .ply import *
-from .npz import *
-from .vxz import *
+from o_voxel.io.ply import *
+from o_voxel.io.npz import *
+from o_voxel.io.vxz import *
 
 
 def read(file_path: str) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:

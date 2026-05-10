@@ -1,5 +1,6 @@
-from . import config
 import importlib
+
+from trellis2.modules.sparse import config
 
 __attributes = {
     "VarLenTensor": "basic",
@@ -58,13 +59,14 @@ def __getattr__(name):
 
 # For Pylance
 if __name__ == "__main__":
-    from .basic import *
-    from .norm import *
-    from .nonlinearity import *
-    from .linear import *
-    from .attention import *
-    from .conv import *
-    from .spatial import *
-    from .serialize import *
-    import transformer
     import conv
+    import transformer
+
+    from trellis2.modules.sparse.attention import *
+    from trellis2.modules.sparse.basic import *
+    from trellis2.modules.sparse.conv import *
+    from trellis2.modules.sparse.linear import *
+    from trellis2.modules.sparse.nonlinearity import *
+    from trellis2.modules.sparse.norm import *
+    from trellis2.modules.sparse.serialize import *
+    from trellis2.modules.sparse.spatial import *

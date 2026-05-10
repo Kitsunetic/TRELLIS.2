@@ -1,1 +1,10 @@
-from .base import Mesh, MeshWithVoxel, MeshWithPbrMaterial, TextureFilterMode, TextureWrapMode, AlphaMode, PbrMaterial, Texture
+from trellis2.representations.mesh.base import (
+    AlphaMode,
+    Mesh,
+    MeshWithPbrMaterial,
+    MeshWithVoxel,
+    PbrMaterial,
+    Texture,
+    TextureFilterMode,
+    TextureWrapMode,
+)

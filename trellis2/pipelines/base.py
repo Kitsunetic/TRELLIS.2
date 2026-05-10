@@ -1,7 +1,9 @@
 from typing import *
+
 import torch
 import torch.nn as nn
-from .. import models
+
+from trellis2 import models
 
 
 class Pipeline:
@@ -24,8 +26,8 @@ class Pipeline:
         """
         Load a pretrained model.
         """
-        import os
         import json
+        import os
 
         is_local = os.path.exists(f"{path}/{config_file}")
 

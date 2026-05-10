@@ -1,14 +1,16 @@
 import os
-import numpy as np
 import pickle
+
+import numpy as np
+import o_voxel
 import torch
 import utils3d
-from .components import StandardDatasetBase
-from ..modules import sparse as sp
-from ..renderers import MeshRenderer
-from ..representations import Mesh
-from ..utils.data_utils import load_balanced_group_indices
-import o_voxel
+
+from trellis2.datasets.components import StandardDatasetBase
+from trellis2.modules import sparse as sp
+from trellis2.renderers import MeshRenderer
+from trellis2.representations import Mesh
+from trellis2.utils.data_utils import load_balanced_group_indices
 
 
 class FlexiDualGridVisMixin:

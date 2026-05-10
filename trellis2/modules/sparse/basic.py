@@ -1,8 +1,9 @@
-from typing import *
 from fractions import Fraction
-import torch
-from . import config
+from typing import *
 
+import torch
+
+from trellis2.modules.sparse import config
 
 __all__ = [
     "VarLenTensor",

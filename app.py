@@ -12,14 +12,13 @@ from typing import *
 
 import cv2
 import numpy as np
-import o_voxel
 import torch
 from PIL import Image
 
 from trellis2.modules.sparse import SparseTensor
 from trellis2.pipelines import Trellis2ImageTo3DPipeline
 from trellis2.renderers import EnvMap
-from trellis2.utils import render_utils
+from trellis2.utils import render_utils, to_glb_z_up
 
 MAX_SEED = np.iinfo(np.int32).max
 TMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
@@ -492,7 +491,7 @@ def extract_glb(
     user_dir = os.path.join(TMP_DIR, str(req.session_hash))
     shape_slat, tex_slat, res = unpack_state(state)
     mesh = pipeline.decode_latent(shape_slat, tex_slat, res)[0]
-    glb = o_voxel.postprocess.to_glb(
+    glb = to_glb_z_up(
         vertices=mesh.vertices,
         faces=mesh.faces,
         attr_volume=mesh.attrs,

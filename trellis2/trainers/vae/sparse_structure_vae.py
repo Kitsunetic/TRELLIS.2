@@ -1,11 +1,12 @@
-from typing import *
 import copy
+from typing import *
+
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 from easydict import EasyDict as edict
+from torch.utils.data import DataLoader
 
-from ..basic import BasicTrainer
+from trellis2.trainers.basic import BasicTrainer
 
 
 class SparseStructureVaeTrainer(BasicTrainer):

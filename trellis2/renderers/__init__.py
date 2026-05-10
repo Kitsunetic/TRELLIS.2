@@ -28,6 +28,6 @@ def __getattr__(name):
 
 # For Pylance
 if __name__ == "__main__":
-    from .mesh_renderer import MeshRenderer
-    from .voxel_renderer import VoxelRenderer
-    from .pbr_mesh_renderer import PbrMeshRenderer, EnvMap
+    from trellis2.renderers.mesh_renderer import MeshRenderer
+    from trellis2.renderers.pbr_mesh_renderer import EnvMap, PbrMeshRenderer
+    from trellis2.renderers.voxel_renderer import VoxelRenderer

@@ -39,27 +39,20 @@ def __getattr__(name):
 
 # For Pylance
 if __name__ == "__main__":
-    from .basic import BasicTrainer
-
-    from .vae.sparse_structure_vae import SparseStructureVaeTrainer
-    from .vae.shape_vae import ShapeVaeTrainer
-    from .vae.pbr_vae import PbrVaeTrainer
-
-    from .flow_matching.flow_matching import (
-        FlowMatchingTrainer,
+    from trellis2.trainers.basic import BasicTrainer
+    from trellis2.trainers.flow_matching.flow_matching import (
         FlowMatchingCFGTrainer,
-        TextConditionedFlowMatchingCFGTrainer,
+        FlowMatchingTrainer,
         ImageConditionedFlowMatchingCFGTrainer,
+        TextConditionedFlowMatchingCFGTrainer,
     )
-
-    from .flow_matching.sparse_flow_matching import (
-        SparseFlowMatchingTrainer,
-        SparseFlowMatchingCFGTrainer,
-        TextConditionedSparseFlowMatchingCFGTrainer,
+    from trellis2.trainers.flow_matching.mixins.image_conditioned import DinoV2FeatureExtractor, DinoV3FeatureExtractor
+    from trellis2.trainers.flow_matching.sparse_flow_matching import (
         ImageConditionedSparseFlowMatchingCFGTrainer,
+        SparseFlowMatchingCFGTrainer,
+        SparseFlowMatchingTrainer,
+        TextConditionedSparseFlowMatchingCFGTrainer,
     )
-
-    from .flow_matching.mixins.image_conditioned import (
-        DinoV2FeatureExtractor,
-        DinoV3FeatureExtractor,
-    )
+    from trellis2.trainers.vae.pbr_vae import PbrVaeTrainer
+    from trellis2.trainers.vae.shape_vae import ShapeVaeTrainer
+    from trellis2.trainers.vae.sparse_structure_vae import SparseStructureVaeTrainer

@@ -1,8 +1,9 @@
+from math import exp
+
 import torch
 import torch.nn.functional as F
-from torch.autograd import Variable
-from math import exp
 from lpips import LPIPS
+from torch.autograd import Variable
 
 
 def smooth_l1_loss(pred, target, beta=1.0):

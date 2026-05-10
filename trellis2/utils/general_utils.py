@@ -1,8 +1,9 @@
-import re
-import numpy as np
-import cv2
-import torch
 import contextlib
+import re
+
+import cv2
+import numpy as np
+import torch
 
 
 # Dictionary utils

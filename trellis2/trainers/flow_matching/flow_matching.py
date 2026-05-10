@@ -1,17 +1,18 @@
-from typing import *
 import copy
+from typing import *
+
+import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
-import numpy as np
 from easydict import EasyDict as edict
+from torch.utils.data import DataLoader
 
-from ..basic import BasicTrainer
-from ...pipelines import samplers
-from ...utils.general_utils import dict_reduce
-from .mixins.classifier_free_guidance import ClassifierFreeGuidanceMixin
-from .mixins.text_conditioned import TextConditionedMixin
-from .mixins.image_conditioned import ImageConditionedMixin
+from trellis2.pipelines import samplers
+from trellis2.trainers.basic import BasicTrainer
+from trellis2.trainers.flow_matching.mixins.classifier_free_guidance import ClassifierFreeGuidanceMixin
+from trellis2.trainers.flow_matching.mixins.image_conditioned import ImageConditionedMixin
+from trellis2.trainers.flow_matching.mixins.text_conditioned import TextConditionedMixin
+from trellis2.utils.general_utils import dict_reduce
 
 
 class FlowMatchingTrainer(BasicTrainer):

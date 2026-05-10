@@ -1,12 +1,12 @@
-import torch
 import numpy as np
-from tqdm import tqdm
+import torch
 import utils3d
 from PIL import Image
+from tqdm import tqdm
 
-from ..renderers import MeshRenderer, VoxelRenderer, PbrMeshRenderer
-from ..representations import Mesh, Voxel, MeshWithPbrMaterial, MeshWithVoxel
-from .random_utils import sphere_hammersley_sequence
+from trellis2.renderers import MeshRenderer, PbrMeshRenderer, VoxelRenderer
+from trellis2.representations import Mesh, MeshWithPbrMaterial, MeshWithVoxel, Voxel
+from trellis2.utils.random_utils import sphere_hammersley_sequence
 
 
 def yaw_pitch_r_fov_to_extrinsics_intrinsics(yaws, pitchs, rs, fovs):

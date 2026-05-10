@@ -43,8 +43,9 @@ def from_pretrained(path: str, **kwargs):
               NOTE: config file and model file should take the name f'{path}.json' and f'{path}.safetensors' respectively.
         **kwargs: Additional arguments for the model constructor.
     """
-    import os
     import json
+    import os
+
     from safetensors.torch import load_file
 
     is_local = os.path.exists(f"{path}.json") and os.path.exists(f"{path}.safetensors")
@@ -71,9 +72,8 @@ def from_pretrained(path: str, **kwargs):
 
 # For Pylance
 if __name__ == "__main__":
-    from .sparse_structure_vae import SparseStructureEncoder, SparseStructureDecoder
-    from .sparse_structure_flow import SparseStructureFlowModel
-    from .structured_latent_flow import SLatFlowModel, ElasticSLatFlowModel
-
-    from .sc_vaes.sparse_unet_vae import SparseUnetVaeEncoder, SparseUnetVaeDecoder
-    from .sc_vaes.fdg_vae import FlexiDualGridVaeEncoder, FlexiDualGridVaeDecoder
+    from trellis2.models.sc_vaes.fdg_vae import FlexiDualGridVaeDecoder, FlexiDualGridVaeEncoder
+    from trellis2.models.sc_vaes.sparse_unet_vae import SparseUnetVaeDecoder, SparseUnetVaeEncoder
+    from trellis2.models.sparse_structure_flow import SparseStructureFlowModel
+    from trellis2.models.sparse_structure_vae import SparseStructureDecoder, SparseStructureEncoder
+    from trellis2.models.structured_latent_flow import ElasticSLatFlowModel, SLatFlowModel

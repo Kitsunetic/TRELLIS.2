@@ -1,8 +1,9 @@
 from typing import *
-from transformers import AutoModelForImageSegmentation
+
 import torch
-from torchvision import transforms
 from PIL import Image
+from torchvision import transforms
+from transformers import AutoModelForImageSegmentation
 
 
 class BiRefNet:

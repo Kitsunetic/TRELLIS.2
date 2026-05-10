@@ -1,10 +1,12 @@
 from typing import *
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from ..modules.norm import GroupNorm32, ChannelLayerNorm32
-from ..modules.spatial import pixel_shuffle_3d
-from ..modules.utils import zero_module, convert_module_to_f16, convert_module_to_f32
+
+from trellis2.modules.norm import ChannelLayerNorm32, GroupNorm32
+from trellis2.modules.spatial import pixel_shuffle_3d
+from trellis2.modules.utils import convert_module_to_f16, convert_module_to_f32, zero_module
 
 
 def norm_layer(norm_type: str, *args, **kwargs) -> nn.Module:

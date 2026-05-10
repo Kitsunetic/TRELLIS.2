@@ -1,9 +1,9 @@
-from typing import *
-import torch
 import math
-from .. import SparseTensor
-from .. import config
+from typing import *
 
+import torch
+
+from trellis2.modules.sparse import SparseTensor, config
 
 __all__ = [
     "sparse_windowed_scaled_dot_product_self_attention",

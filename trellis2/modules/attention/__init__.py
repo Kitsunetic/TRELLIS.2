@@ -1,3 +1,3 @@
-from .full_attn import *
-from .modules import *
-from .rope import *
+from trellis2.modules.attention.full_attn import *
+from trellis2.modules.attention.modules import *
+from trellis2.modules.attention.rope import *

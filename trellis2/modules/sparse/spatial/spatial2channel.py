@@ -1,7 +1,9 @@
 from typing import *
+
 import torch
 import torch.nn as nn
-from .. import SparseTensor
+
+from trellis2.modules.sparse import SparseTensor
 
 
 class SparseSpatial2Channel(nn.Module):

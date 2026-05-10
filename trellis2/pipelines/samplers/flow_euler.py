@@ -1,11 +1,13 @@
 from typing import *
-import torch
+
 import numpy as np
-from tqdm import tqdm
+import torch
 from easydict import EasyDict as edict
-from .base import Sampler
-from .classifier_free_guidance_mixin import ClassifierFreeGuidanceSamplerMixin
-from .guidance_interval_mixin import GuidanceIntervalSamplerMixin
+from tqdm import tqdm
+
+from trellis2.pipelines.samplers.base import Sampler
+from trellis2.pipelines.samplers.classifier_free_guidance_mixin import ClassifierFreeGuidanceSamplerMixin
+from trellis2.pipelines.samplers.guidance_interval_mixin import GuidanceIntervalSamplerMixin
 
 
 class OriginalFlowEulerSampler(Sampler):
@@ -146,11 +148,10 @@ class FlowEulerSampler(OriginalFlowEulerSampler):
         # 하위 PyTorch 모델(forward)로 알 수 없는 인자가 흘러가지 않도록 완벽히 차단합니다.
         # =================================================================
         control_latent = kwargs.pop("control", None)
+        tau_0 = kwargs.pop("space_control_tau", 6)
 
         start_step_idx = 0
         if control_latent is not None:
-            # tau 값 역시 kwargs에서 안전하게 빼냅니다.
-            tau_0 = kwargs.pop("space_control_tau", 6)
             start_step_idx = min(max(tau_0, 0), steps - 1)
 
             t_0 = t_seq[start_step_idx]

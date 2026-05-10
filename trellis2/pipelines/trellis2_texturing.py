@@ -1,18 +1,20 @@
 from typing import *
-import torch
-import torch.nn as nn
-import numpy as np
-from PIL import Image
-import trimesh
-from .base import Pipeline
-from . import samplers, rembg
-from ..modules.sparse import SparseTensor
-from ..modules import image_feature_extractor
-import o_voxel
+
 import cumesh
-import nvdiffrast.torch as dr
 import cv2
 import flex_gemm
+import numpy as np
+import nvdiffrast.torch as dr
+import o_voxel
+import torch
+import torch.nn as nn
+import trimesh
+from PIL import Image
+
+from trellis2.modules import image_feature_extractor
+from trellis2.modules.sparse import SparseTensor
+from trellis2.pipelines import rembg, samplers
+from trellis2.pipelines.base import Pipeline
 
 
 class Trellis2TexturingPipeline(Pipeline):

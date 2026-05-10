@@ -7,7 +7,7 @@ from tqdm import tqdm
 import trimesh
 import trimesh.visual
 
-from .. import _C
+from o_voxel import _C
 
 __all__ = ["textured_mesh_to_volumetric_attr", "blender_dump_to_volumetric_attr"]
 

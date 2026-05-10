@@ -1,8 +1,10 @@
 from typing import *
-import torch
-from ..voxel import Voxel
+
 import cumesh
+import torch
 from flex_gemm.ops.grid_sample import grid_sample_3d
+
+from trellis2.representations.voxel import Voxel
 
 
 class Mesh:
@@ -47,6 +49,54 @@ class Mesh:
         if mesh.num_boundary_loops == 0:
             return
         mesh.fill_holes(max_hole_perimeter=max_hole_perimeter)
+        new_vertices, new_faces = mesh.read()
+
+        self.vertices = new_vertices.to(self.device)
+        self.faces = new_faces.to(self.device)
+
+    def remove_duplicate_faces(self):
+        vertices = self.vertices.cuda()
+        faces = self.faces.cuda()
+
+        mesh = cumesh.CuMesh()
+        mesh.init(vertices, faces)
+        mesh.remove_duplicate_faces()
+        new_vertices, new_faces = mesh.read()
+
+        self.vertices = new_vertices.to(self.device)
+        self.faces = new_faces.to(self.device)
+
+    def repair_non_manifold_edges(self):
+        vertices = self.vertices.cuda()
+        faces = self.faces.cuda()
+
+        mesh = cumesh.CuMesh()
+        mesh.init(vertices, faces)
+        mesh.repair_non_manifold_edges()
+        new_vertices, new_faces = mesh.read()
+
+        self.vertices = new_vertices.to(self.device)
+        self.faces = new_faces.to(self.device)
+
+    def remove_small_connected_components(self, min_area: float):
+        vertices = self.vertices.cuda()
+        faces = self.faces.cuda()
+
+        mesh = cumesh.CuMesh()
+        mesh.init(vertices, faces)
+        mesh.remove_small_connected_components(min_area)
+        new_vertices, new_faces = mesh.read()
+
+        self.vertices = new_vertices.to(self.device)
+        self.faces = new_faces.to(self.device)
+
+    def unify_face_orientations(self):
+        vertices = self.vertices.cuda()
+        faces = self.faces.cuda()
+
+        mesh = cumesh.CuMesh()
+        mesh.init(vertices, faces)
+        mesh.unify_face_orientations()
         new_vertices, new_faces = mesh.read()
 
         self.vertices = new_vertices.to(self.device)

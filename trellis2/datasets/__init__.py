@@ -35,10 +35,9 @@ def __getattr__(name):
 
 # For Pylance
 if __name__ == "__main__":
-    from .flexi_dual_grid import FlexiDualGridDataset
-    from .sparse_voxel_pbr import SparseVoxelPbrDataset
-
-    from .sparse_structure_latent import SparseStructureLatent, ImageConditionedSparseStructureLatent
-    from .structured_latent import SLat, ImageConditionedSLat
-    from .structured_latent_shape import SLatShape, ImageConditionedSLatShape
-    from .structured_latent_svpbr import SLatPbr, ImageConditionedSLatPbr
+    from trellis2.datasets.flexi_dual_grid import FlexiDualGridDataset
+    from trellis2.datasets.sparse_structure_latent import ImageConditionedSparseStructureLatent, SparseStructureLatent
+    from trellis2.datasets.sparse_voxel_pbr import SparseVoxelPbrDataset
+    from trellis2.datasets.structured_latent import ImageConditionedSLat, SLat
+    from trellis2.datasets.structured_latent_shape import ImageConditionedSLatShape, SLatShape
+    from trellis2.datasets.structured_latent_svpbr import ImageConditionedSLatPbr, SLatPbr

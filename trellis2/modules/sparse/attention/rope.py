@@ -1,7 +1,9 @@
 from typing import *
+
 import torch
 import torch.nn as nn
-from ..basic import SparseTensor
+
+from trellis2.modules.sparse.basic import SparseTensor
 
 
 class SparseRotaryPositionEmbedder(nn.Module):

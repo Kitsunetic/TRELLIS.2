@@ -1,8 +1,17 @@
 from typing import *
+
 import torch
-from easydict import EasyDict as edict
-from ..representations.mesh import Mesh, MeshWithVoxel, MeshWithPbrMaterial, TextureFilterMode, AlphaMode, TextureWrapMode
 import torch.nn.functional as F
+from easydict import EasyDict as edict
+
+from trellis2.representations.mesh import (
+    AlphaMode,
+    Mesh,
+    MeshWithPbrMaterial,
+    MeshWithVoxel,
+    TextureFilterMode,
+    TextureWrapMode,
+)
 
 
 def intrinsics_to_projection(

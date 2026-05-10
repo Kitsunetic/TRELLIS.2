@@ -1,13 +1,15 @@
-import os
 import json
+import os
 from typing import *
+
 import numpy as np
 import torch
-from ..representations import Voxel
-from ..renderers import VoxelRenderer
-from .components import StandardDatasetBase, ImageConditionedMixin
-from .. import models
-from ..utils.render_utils import yaw_pitch_r_fov_to_extrinsics_intrinsics
+
+from trellis2 import models
+from trellis2.datasets.components import ImageConditionedMixin, StandardDatasetBase
+from trellis2.renderers import VoxelRenderer
+from trellis2.representations import Voxel
+from trellis2.utils.render_utils import yaw_pitch_r_fov_to_extrinsics_intrinsics
 
 
 class SparseStructureLatentVisMixin:

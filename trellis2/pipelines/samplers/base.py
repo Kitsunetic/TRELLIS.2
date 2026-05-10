@@ -1,5 +1,5 @@
-from typing import *
 from abc import ABC, abstractmethod
+from typing import *
 
 
 class Sampler(ABC):

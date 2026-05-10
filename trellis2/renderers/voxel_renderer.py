@@ -1,7 +1,7 @@
 import torch
 from easydict import EasyDict as edict
-from ..representations import Voxel
-from easydict import EasyDict as edict
+
+from trellis2.representations import Voxel
 
 
 class VoxelRenderer:

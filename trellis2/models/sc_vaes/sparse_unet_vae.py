@@ -1,11 +1,13 @@
 from typing import *
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint
-from ...modules.utils import convert_module_to_f16, convert_module_to_f32, zero_module
-from ...modules import sparse as sp
-from ...modules.norm import LayerNorm32
+
+from trellis2.modules import sparse as sp
+from trellis2.modules.norm import LayerNorm32
+from trellis2.modules.utils import convert_module_to_f16, convert_module_to_f32, zero_module
 
 
 class SparseResBlock3d(nn.Module):

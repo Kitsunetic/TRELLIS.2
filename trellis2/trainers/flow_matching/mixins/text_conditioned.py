@@ -1,11 +1,11 @@
-from typing import *
 import os
+from typing import *
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 import torch
 from transformers import AutoTokenizer, CLIPTextModel
 
-from ....utils import dist_utils
+from trellis2.utils import dist_utils
 
 
 class TextConditionedMixin:

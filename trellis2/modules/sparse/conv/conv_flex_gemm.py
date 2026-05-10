@@ -1,10 +1,12 @@
 import math
+
+import flex_gemm
 import torch
 import torch.nn as nn
-from .. import SparseTensor
-from . import config
-import flex_gemm
 from flex_gemm.ops.spconv import sparse_submanifold_conv3d
+
+from trellis2.modules.sparse import SparseTensor
+from trellis2.modules.sparse.conv import config
 
 
 def sparse_conv3d_init(

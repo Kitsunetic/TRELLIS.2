@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from ..modules import sparse as sp
+
+from trellis2.modules import sparse as sp
 
 MIX_PRECISION_MODULES = (
     nn.Conv1d,

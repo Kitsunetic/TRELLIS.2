@@ -1,15 +1,17 @@
-from typing import *
 from functools import partial
+from typing import *
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-from ..modules.utils import convert_module_to, manual_cast, str_to_dtype
-from ..modules.transformer import AbsolutePositionEmbedder
-from ..modules import sparse as sp
-from ..modules.sparse.transformer import ModulatedSparseTransformerCrossBlock
-from .sparse_structure_flow import TimestepEmbedder
-from .sparse_elastic_mixin import SparseTransformerElasticMixin
+
+from trellis2.models.sparse_elastic_mixin import SparseTransformerElasticMixin
+from trellis2.models.sparse_structure_flow import TimestepEmbedder
+from trellis2.modules import sparse as sp
+from trellis2.modules.sparse.transformer import ModulatedSparseTransformerCrossBlock
+from trellis2.modules.transformer import AbsolutePositionEmbedder
+from trellis2.modules.utils import convert_module_to, manual_cast, str_to_dtype
 
 
 class SLatFlowModel(nn.Module):

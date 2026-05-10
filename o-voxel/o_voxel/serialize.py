@@ -1,6 +1,6 @@
 from typing import *
 import torch
-from . import _C
+from o_voxel import _C
 
 
 @torch.no_grad()

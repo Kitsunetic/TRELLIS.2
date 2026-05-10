@@ -1,6 +1,6 @@
-import torch
 import torch.nn as nn
-from . import VarLenTensor
+
+from trellis2.modules.sparse import VarLenTensor
 
 __all__ = ["SparseReLU", "SparseSiLU", "SparseGELU", "SparseActivation"]
 

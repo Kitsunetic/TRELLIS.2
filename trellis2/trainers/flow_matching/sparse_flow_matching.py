@@ -1,20 +1,21 @@
-from typing import *
-import os
 import copy
 import functools
+import os
+from typing import *
+
+import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
-import numpy as np
 from easydict import EasyDict as edict
+from torch.utils.data import DataLoader
 
-from ...modules import sparse as sp
-from ...utils.general_utils import dict_reduce
-from ...utils.data_utils import recursive_to_device, cycle, BalancedResumableSampler
-from .flow_matching import FlowMatchingTrainer
-from .mixins.classifier_free_guidance import ClassifierFreeGuidanceMixin
-from .mixins.text_conditioned import TextConditionedMixin
-from .mixins.image_conditioned import ImageConditionedMixin, MultiImageConditionedMixin
+from trellis2.modules import sparse as sp
+from trellis2.trainers.flow_matching.flow_matching import FlowMatchingTrainer
+from trellis2.trainers.flow_matching.mixins.classifier_free_guidance import ClassifierFreeGuidanceMixin
+from trellis2.trainers.flow_matching.mixins.image_conditioned import ImageConditionedMixin, MultiImageConditionedMixin
+from trellis2.trainers.flow_matching.mixins.text_conditioned import TextConditionedMixin
+from trellis2.utils.data_utils import BalancedResumableSampler, cycle, recursive_to_device
+from trellis2.utils.general_utils import dict_reduce
 
 
 class SparseFlowMatchingTrainer(FlowMatchingTrainer):

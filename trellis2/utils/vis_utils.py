@@ -1,9 +1,11 @@
 from typing import *
+
 import numpy as np
 import torch
-from ..modules import sparse as sp
-from ..representations import Voxel
-from .render_utils import render_video
+
+from trellis2.modules import sparse as sp
+from trellis2.representations import Voxel
+from trellis2.utils.render_utils import render_video
 
 
 def pca_color(feats: torch.Tensor, channels: Tuple[int, int, int] = (0, 1, 2)) -> torch.Tensor:

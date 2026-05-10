@@ -1,20 +1,21 @@
-from typing import *
-import os
 import copy
 import functools
+import os
+from typing import *
+
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 import utils3d
 from easydict import EasyDict as edict
+from torch.utils.data import DataLoader
 
-from ..basic import BasicTrainer
-from ...modules import sparse as sp
-from ...renderers import MeshRenderer
-from ...representations import Mesh
-from ...utils.data_utils import recursive_to_device, cycle, BalancedResumableSampler
-from ...utils.loss_utils import l1_loss, ssim, lpips
+from trellis2.modules import sparse as sp
+from trellis2.renderers import MeshRenderer
+from trellis2.representations import Mesh
+from trellis2.trainers.basic import BasicTrainer
+from trellis2.utils.data_utils import BalancedResumableSampler, cycle, recursive_to_device
+from trellis2.utils.loss_utils import l1_loss, lpips, ssim
 
 
 class ShapeVaeTrainer(BasicTrainer):

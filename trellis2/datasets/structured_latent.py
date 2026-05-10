@@ -1,14 +1,16 @@
 import json
 import os
 from typing import *
+
 import numpy as np
 import torch
 import utils3d.torch
-from .components import StandardDatasetBase, ImageConditionedMixin
-from ..modules.sparse.basic import SparseTensor
-from .. import models
-from ..utils.render_utils import get_renderer
-from ..utils.data_utils import load_balanced_group_indices
+
+from trellis2 import models
+from trellis2.datasets.components import ImageConditionedMixin, StandardDatasetBase
+from trellis2.modules.sparse.basic import SparseTensor
+from trellis2.utils.data_utils import load_balanced_group_indices
+from trellis2.utils.render_utils import get_renderer
 
 
 class SLatVisMixin:

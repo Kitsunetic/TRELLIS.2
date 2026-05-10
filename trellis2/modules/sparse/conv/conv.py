@@ -1,9 +1,8 @@
-from .. import config
 import importlib
-import torch
-import torch.nn as nn
-from .. import SparseTensor
 
+import torch.nn as nn
+
+from trellis2.modules.sparse import SparseTensor, config
 
 _backends = {}
 

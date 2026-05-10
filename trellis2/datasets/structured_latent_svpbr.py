@@ -3,16 +3,18 @@ import os
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 import json
 from typing import *
+
+import cv2
 import numpy as np
 import torch
-import cv2
-from .. import models
-from .components import StandardDatasetBase, ImageConditionedMixin
-from ..modules.sparse import SparseTensor, sparse_cat
-from ..representations import MeshWithVoxel
-from ..renderers import PbrMeshRenderer, EnvMap
-from ..utils.data_utils import load_balanced_group_indices
-from ..utils.render_utils import yaw_pitch_r_fov_to_extrinsics_intrinsics
+
+from trellis2 import models
+from trellis2.datasets.components import ImageConditionedMixin, StandardDatasetBase
+from trellis2.modules.sparse import SparseTensor, sparse_cat
+from trellis2.renderers import EnvMap, PbrMeshRenderer
+from trellis2.representations import MeshWithVoxel
+from trellis2.utils.data_utils import load_balanced_group_indices
+from trellis2.utils.render_utils import yaw_pitch_r_fov_to_extrinsics_intrinsics
 
 
 class SLatPbrVisMixin:

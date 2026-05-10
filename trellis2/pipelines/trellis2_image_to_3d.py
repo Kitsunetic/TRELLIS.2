@@ -1,13 +1,15 @@
 from typing import *
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 from PIL import Image
-from .base import Pipeline
-from . import samplers, rembg
-from ..modules.sparse import SparseTensor
-from ..modules import image_feature_extractor
-from ..representations import Mesh, MeshWithVoxel
+
+from trellis2.modules import image_feature_extractor
+from trellis2.modules.sparse import SparseTensor
+from trellis2.pipelines import rembg, samplers
+from trellis2.pipelines.base import Pipeline
+from trellis2.representations import Mesh, MeshWithVoxel
 
 
 class Trellis2ImageTo3DPipeline(Pipeline):

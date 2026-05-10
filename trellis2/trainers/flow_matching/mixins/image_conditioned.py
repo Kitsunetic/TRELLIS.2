@@ -1,12 +1,13 @@
 from typing import *
+
+import numpy as np
 import torch
 import torch.nn.functional as F
+from PIL import Image
 from torchvision import transforms
 from transformers import DINOv3ViTModel
-import numpy as np
-from PIL import Image
 
-from ....utils import dist_utils
+from trellis2.utils import dist_utils
 
 
 class DinoV2FeatureExtractor:

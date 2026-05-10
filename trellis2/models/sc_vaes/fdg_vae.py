@@ -1,22 +1,12 @@
 from typing import *
+
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from ...modules import sparse as sp
-from .sparse_unet_vae import (
-    SparseResBlock3d,
-    SparseConvNeXtBlock3d,
-    SparseResBlockDownsample3d,
-    SparseResBlockUpsample3d,
-    SparseResBlockS2C3d,
-    SparseResBlockC2S3d,
-)
-from .sparse_unet_vae import (
-    SparseUnetVaeEncoder,
-    SparseUnetVaeDecoder,
-)
-from ...representations import Mesh
 from o_voxel.convert import flexible_dual_grid_to_mesh
+
+from trellis2.models.sc_vaes.sparse_unet_vae import SparseUnetVaeDecoder, SparseUnetVaeEncoder
+from trellis2.modules import sparse as sp
+from trellis2.representations import Mesh
 
 
 class FlexiDualGridVaeEncoder(SparseUnetVaeEncoder):

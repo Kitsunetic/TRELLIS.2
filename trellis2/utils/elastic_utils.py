@@ -1,9 +1,10 @@
 from abc import abstractmethod
 from contextlib import contextmanager
 from typing import Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 
 
 class MemoryController:
