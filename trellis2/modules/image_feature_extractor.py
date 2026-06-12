@@ -84,12 +84,19 @@ class DinoV3FeatureExtractor:
     def cpu(self):
         self.model.cpu()
 
+    def _get_layers(self):
+        if hasattr(self.model, "layer"):
+            return self.model.layer
+        if hasattr(self.model, "model") and hasattr(self.model.model, "layer"):
+            return self.model.model.layer
+        raise AttributeError(f"Unsupported DINOv3ViTModel layout: {type(self.model).__name__}")
+
     def extract_features(self, image: torch.Tensor) -> torch.Tensor:
         image = image.to(self.model.embeddings.patch_embeddings.weight.dtype)
         hidden_states = self.model.embeddings(image, bool_masked_pos=None)
         position_embeddings = self.model.rope_embeddings(image)
 
-        for i, layer_module in enumerate(self.model.layer):
+        for i, layer_module in enumerate(self._get_layers()):
             hidden_states = layer_module(
                 hidden_states,
                 position_embeddings=position_embeddings,
