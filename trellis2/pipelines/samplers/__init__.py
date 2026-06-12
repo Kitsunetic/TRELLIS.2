@@ -1,3 +1,4 @@
 from trellis2.pipelines.samplers.base import Sampler
 from trellis2.pipelines.samplers.flow_euler import FlowEulerCfgSampler, FlowEulerGuidanceIntervalSampler, FlowEulerSampler
 from trellis2.pipelines.samplers.flow_euler_geometry_guidance import FlowEulerGeometryGuidanceSampler
+from trellis2.pipelines.samplers.flow_euler_shape_guidance import FlowEulerShapeGuidanceSampler

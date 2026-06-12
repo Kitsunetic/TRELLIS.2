@@ -16,7 +16,15 @@ from PIL import Image
 
 from trellis2.pipelines import SpaceControlPipeline
 from trellis2.renderers import EnvMap
-from trellis2.utils import aggressive_repair_mesh, mesh_topology_stats, render_utils, smooth_mesh_taubin, solidify_mesh_with_control, to_glb_z_up
+from trellis2.utils import (
+    aggressive_repair_mesh,
+    mesh_topology_stats,
+    render_utils,
+    smooth_mesh_taubin,
+    solidify_mesh_with_control,
+    solidify_mesh_with_sdf,
+    to_glb_z_up,
+)
 
 
 def ensure_model_and_patch(repo_id="microsoft/TRELLIS.2-4B", local_dir="results/TRELLIS.2-4B"):
@@ -136,6 +144,11 @@ def main(args):
         "guidance_type": args.guidance_type,
         "space_control_tau": args.tau,
     }
+    shape_slat_sampler_params = {}
+    if args.shape_guidance_type is not None:
+        shape_slat_sampler_params["shape_guidance_type"] = args.shape_guidance_type
+    elif args.guidance_type == "last_surface":
+        shape_slat_sampler_params["shape_guidance_type"] = "last_surface"
     if args.steps is not None:
         sparse_structure_sampler_params["steps"] = args.steps
     if args.guidance_strength is not None:
@@ -175,24 +188,61 @@ def main(args):
         if value is not None:
             sparse_structure_sampler_params[key] = value
 
+    if "shape_guidance_type" in shape_slat_sampler_params:
+        for key in (
+            "last_offset",
+            "last_sdf_resolution",
+            "sdf_chunk_size",
+            "generated_samples",
+            "last_samples",
+            "lambda_pen",
+            "lambda_cov",
+            "lambda_prior",
+            "shape_geometry_guidance_strength",
+            "shape_geometry_guidance_interval",
+            "shape_geometry_guidance_schedule",
+            "shape_geometry_guidance_rescale",
+            "shape_geometry_grad_clip",
+            "shape_geometry_guidance_cfg_mode",
+        ):
+            value = getattr(args, key)
+            if value is not None:
+                if key == "shape_geometry_guidance_interval":
+                    value = tuple(value)
+                shape_slat_sampler_params[key] = value
+
     mesh = pipeline.run(
         image=image,
         sparse_structure_sampler_params=sparse_structure_sampler_params,
+        shape_slat_sampler_params=shape_slat_sampler_params,
     )[0]
 
     mesh.simplify(16777216)  # nvdiffrast limit
     topology_before = mesh_topology_stats(mesh)
     topology_solidified = None
     if args.solidify_volume:
-        mesh = solidify_mesh_with_control(
-            mesh,
-            control_mesh_path=spatial_control_path if args.solidify_include_control else None,
-            resolution=args.solidify_resolution,
-            generated_surface_dilation=args.solidify_generated_surface_dilation,
-            control_surface_dilation=args.solidify_control_surface_dilation,
-            closing_iters=args.solidify_closing_iters,
-            final_closing_iters=args.solidify_final_closing_iters,
-        )
+        if args.solidify_method == "sdf":
+            mesh = solidify_mesh_with_sdf(
+                mesh,
+                control_mesh_path=spatial_control_path if args.solidify_include_control else None,
+                resolution=args.solidify_resolution,
+                generated_surface_thickness=args.solidify_sdf_generated_surface_thickness,
+                control_offset=args.solidify_sdf_control_offset,
+                smoothing_sigma=args.solidify_sdf_smoothing_sigma,
+                sdf_mode=args.solidify_sdf_mode,
+                chunk_size=args.solidify_sdf_chunk_size,
+                domain_margin=args.solidify_sdf_domain_margin,
+            )
+        else:
+            mesh = solidify_mesh_with_control(
+                mesh,
+                control_mesh_path=spatial_control_path if args.solidify_include_control else None,
+                resolution=args.solidify_resolution,
+                generated_surface_dilation=args.solidify_generated_surface_dilation,
+                control_surface_dilation=args.solidify_control_surface_dilation,
+                closing_iters=args.solidify_closing_iters,
+                final_closing_iters=args.solidify_final_closing_iters,
+            )
         topology_solidified = mesh_topology_stats(mesh)
     if args.make_watertight:
         aggressive_repair_mesh(
@@ -274,7 +324,8 @@ if __name__ == "__main__":
     parser.add_argument("--tau", type=int, default=6, help="Strength of spatial control (typically 1~10, default 6)")
     parser.add_argument("--out_dir", type=str, default="outputs", help="Directory to save the generated files")
     parser.add_argument("--control_mode", type=str, default="spacecontrol", choices=["none", "spacecontrol", "guidance", "both"])
-    parser.add_argument("--guidance_type", type=str, default="containment", choices=["latent", "occupancy", "containment", "shell"])
+    parser.add_argument("--guidance_type", type=str, default="containment", choices=["latent", "occupancy", "containment", "shell", "last_surface"])
+    parser.add_argument("--shape_guidance_type", type=str, default=None, choices=["last_surface"])
     parser.add_argument("--steps", type=int, default=None)
     parser.add_argument("--rescale_t", type=float, default=None)
     parser.add_argument("--guidance_strength", type=float, default=None)
@@ -296,6 +347,20 @@ if __name__ == "__main__":
     parser.add_argument("--bottom_weight", type=float, default=1.0)
     parser.add_argument("--bottom_band_ratio", type=float, default=0.18)
     parser.add_argument("--bottom_outer_margin", type=int, default=1)
+    parser.add_argument("--last_offset", type=float, default=0.025)
+    parser.add_argument("--last_sdf_resolution", type=int, default=128)
+    parser.add_argument("--sdf_chunk_size", type=int, default=16384)
+    parser.add_argument("--generated_samples", type=int, default=2048)
+    parser.add_argument("--last_samples", type=int, default=2048)
+    parser.add_argument("--lambda_pen", type=float, default=10.0)
+    parser.add_argument("--lambda_cov", type=float, default=1.0)
+    parser.add_argument("--lambda_prior", type=float, default=0.0)
+    parser.add_argument("--shape_geometry_guidance_strength", type=float, default=1.0)
+    parser.add_argument("--shape_geometry_guidance_interval", type=float, nargs=2, default=[0.5, 0.95])
+    parser.add_argument("--shape_geometry_guidance_schedule", type=str, default="constant", choices=["constant", "linear_decay", "linear_rise"])
+    parser.add_argument("--shape_geometry_guidance_rescale", type=lambda x: str(x).lower() in {"1", "true", "yes"}, default=True)
+    parser.add_argument("--shape_geometry_grad_clip", type=float, default=5.0)
+    parser.add_argument("--shape_geometry_guidance_cfg_mode", type=str, default="cond_only", choices=["cond_only", "with_cfg"])
     parser.add_argument("--normalize_control", action="store_true", help="Renormalize the control mesh into the unit cube")
     parser.add_argument("--normalize_padding", type=float, default=0.0)
     parser.add_argument("--normalize_padding_x", type=float, default=0.02)
@@ -303,12 +368,19 @@ if __name__ == "__main__":
     parser.add_argument("--normalize_padding_z", type=float, default=0.0)
     parser.add_argument("--fill_holes_max_hole_perimeter", type=float, default=0.0)
     parser.add_argument("--solidify_volume", action="store_true")
+    parser.add_argument("--solidify_method", type=str, default="volume", choices=["volume", "sdf"])
     parser.add_argument("--solidify_include_control", type=lambda x: str(x).lower() in {"1", "true", "yes"}, default=True)
     parser.add_argument("--solidify_resolution", type=int, default=128)
     parser.add_argument("--solidify_generated_surface_dilation", type=int, default=2)
     parser.add_argument("--solidify_control_surface_dilation", type=int, default=2)
     parser.add_argument("--solidify_closing_iters", type=int, default=2)
     parser.add_argument("--solidify_final_closing_iters", type=int, default=1)
+    parser.add_argument("--solidify_sdf_generated_surface_thickness", type=float, default=1.5)
+    parser.add_argument("--solidify_sdf_control_offset", type=float, default=1.0)
+    parser.add_argument("--solidify_sdf_smoothing_sigma", type=float, default=0.75)
+    parser.add_argument("--solidify_sdf_mode", type=str, default="raystab", choices=["watertight", "raystab"])
+    parser.add_argument("--solidify_sdf_chunk_size", type=int, default=1048576)
+    parser.add_argument("--solidify_sdf_domain_margin", type=float, default=0.03)
     parser.add_argument("--solidify_smoothing_iters", type=int, default=0)
     parser.add_argument("--make_watertight", action="store_true")
     parser.add_argument("--watertight_max_hole_perimeter", type=float, default=10.0)

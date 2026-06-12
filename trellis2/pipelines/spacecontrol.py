@@ -9,7 +9,7 @@ from trellis2.modules import image_feature_extractor
 from trellis2.modules.sparse import SparseTensor
 from trellis2.pipelines import rembg, samplers
 from trellis2.pipelines.base import Pipeline
-from trellis2.pipelines.guidance import build_geometry_guidance
+from trellis2.pipelines.guidance import build_geometry_guidance, build_shape_slat_guidance
 from trellis2.representations import Mesh, MeshWithVoxel
 from trellis2.utils.spacecontrol import voxelize_sq_francis
 
@@ -282,18 +282,35 @@ class SpaceControlPipeline(Pipeline):
         # SpaceControl
 
         sampler_params = {**self.shape_slat_sampler_params, **sampler_params}
+        sampler = sampler_params.pop("_sampler_override", self.shape_slat_sampler)
+        shape_geometry_guidance = sampler_params.get("shape_geometry_guidance")
+        if sampler_params.get("shape_geometry_resolution") is None:
+            sampler_params["shape_geometry_resolution"] = 512 if flow_model is self.models.get("shape_slat_flow_model_512") else 1024
+        decoder_already_loaded = False
+        if self.low_vram and shape_geometry_guidance is not None:
+            self.models["shape_slat_decoder"].to(self.device)
+            self.models["shape_slat_decoder"].low_vram = True
+            decoder_already_loaded = True
         if self.low_vram:
             flow_model.to(self.device)
-        slat = self.shape_slat_sampler.sample(
+        sample_ret = sampler.sample(
             flow_model,
             noise,
             **cond,
             **sampler_params,
             verbose=True,
             tqdm_desc="Sampling shape SLat",
-        ).samples
+        )
+        slat = sample_ret.samples
+        shape_metrics = list(getattr(sample_ret, "guidance", []))
+        if shape_metrics:
+            existing = self.last_guidance_metrics or []
+            self.last_guidance_metrics = [*existing, *shape_metrics]
         if self.low_vram:
             flow_model.cpu()
+            if decoder_already_loaded:
+                self.models["shape_slat_decoder"].cpu()
+                self.models["shape_slat_decoder"].low_vram = False
 
         std = torch.tensor(self.shape_slat_normalization["std"])[None].to(slat.device)
         mean = torch.tensor(self.shape_slat_normalization["mean"])[None].to(slat.device)
@@ -327,16 +344,31 @@ class SpaceControlPipeline(Pipeline):
             coords=coords,
         )
         sampler_params = {**self.shape_slat_sampler_params, **sampler_params}
+        sampler = sampler_params.pop("_sampler_override", self.shape_slat_sampler)
+        sampler_params["shape_geometry_resolution"] = 512
+        shape_geometry_guidance = sampler_params.get("shape_geometry_guidance")
+        decoder_already_loaded = False
+        if self.low_vram and shape_geometry_guidance is not None:
+            self.models["shape_slat_decoder"].to(self.device)
+            self.models["shape_slat_decoder"].low_vram = True
+            decoder_already_loaded = True
         if self.low_vram:
             flow_model_lr.to(self.device)
-        slat = self.shape_slat_sampler.sample(
+        sample_ret = sampler.sample(
             flow_model_lr,
             noise,
             **lr_cond,
             **sampler_params,
             verbose=True,
             tqdm_desc="Sampling shape SLat",
-        ).samples
+        )
+        slat = sample_ret.samples
+        shape_metrics = list(getattr(sample_ret, "guidance", []))
+        if shape_metrics:
+            for metric in shape_metrics:
+                metric.setdefault("shape_stage", "lr")
+            existing = self.last_guidance_metrics or []
+            self.last_guidance_metrics = [*existing, *shape_metrics]
         if self.low_vram:
             flow_model_lr.cpu()
         std = torch.tensor(self.shape_slat_normalization["std"])[None].to(slat.device)
@@ -351,6 +383,7 @@ class SpaceControlPipeline(Pipeline):
         if self.low_vram:
             self.models["shape_slat_decoder"].cpu()
             self.models["shape_slat_decoder"].low_vram = False
+            decoder_already_loaded = False
         hr_resolution = resolution
         while True:
             quant_coords = torch.cat(
@@ -374,18 +407,35 @@ class SpaceControlPipeline(Pipeline):
             coords=coords,
         )
         sampler_params = {**self.shape_slat_sampler_params, **sampler_params}
+        sampler = sampler_params.pop("_sampler_override", self.shape_slat_sampler)
+        sampler_params["shape_geometry_resolution"] = hr_resolution
+        shape_geometry_guidance = sampler_params.get("shape_geometry_guidance")
         if self.low_vram:
             flow_model.to(self.device)
-        slat = self.shape_slat_sampler.sample(
+            if shape_geometry_guidance is not None and not decoder_already_loaded:
+                self.models["shape_slat_decoder"].to(self.device)
+                self.models["shape_slat_decoder"].low_vram = True
+                decoder_already_loaded = True
+        sample_ret = sampler.sample(
             flow_model,
             noise,
             **cond,
             **sampler_params,
             verbose=True,
             tqdm_desc="Sampling shape SLat",
-        ).samples
+        )
+        slat = sample_ret.samples
+        shape_metrics = list(getattr(sample_ret, "guidance", []))
+        if shape_metrics:
+            for metric in shape_metrics:
+                metric.setdefault("shape_stage", "hr")
+            existing = self.last_guidance_metrics or []
+            self.last_guidance_metrics = [*existing, *shape_metrics]
         if self.low_vram:
             flow_model.cpu()
+            if decoder_already_loaded:
+                self.models["shape_slat_decoder"].cpu()
+                self.models["shape_slat_decoder"].low_vram = False
 
         std = torch.tensor(self.shape_slat_normalization["std"])[None].to(slat.device)
         mean = torch.tensor(self.shape_slat_normalization["mean"])[None].to(slat.device)
@@ -574,9 +624,19 @@ class SpaceControlPipeline(Pipeline):
         cond_1024 = self.get_cond([image], 1024) if pipeline_type != "512" else None
 
         sparse_structure_sampler_params = dict(sparse_structure_sampler_params)
+        shape_slat_sampler_params = dict(shape_slat_sampler_params)
         spatial_control_path = sparse_structure_sampler_params.pop("spatial_control_mesh_path", None)
         control_mode = sparse_structure_sampler_params.pop("control_mode", None)
         guidance_type = sparse_structure_sampler_params.pop("guidance_type", "containment")
+        shape_guidance_type = shape_slat_sampler_params.pop("shape_guidance_type", None)
+        guidance_type = guidance_type.lower()
+        if shape_guidance_type is not None:
+            shape_guidance_type = shape_guidance_type.lower()
+        guidance_type_routed_to_shape = False
+        if guidance_type == "last_surface":
+            shape_guidance_type = "last_surface"
+            guidance_type = "containment"
+            guidance_type_routed_to_shape = True
 
         if control_mode is None:
             control_mode = "spacecontrol" if spatial_control_path is not None else "none"
@@ -585,8 +645,9 @@ class SpaceControlPipeline(Pipeline):
             raise ValueError(f"Unsupported control_mode: {control_mode}")
 
         use_spacecontrol = control_mode in {"spacecontrol", "both"}
-        use_guidance = control_mode in {"guidance", "both"}
-        if (use_spacecontrol or use_guidance) and spatial_control_path is None:
+        use_guidance = control_mode in {"guidance", "both"} and not guidance_type_routed_to_shape
+        use_shape_guidance = shape_guidance_type is not None
+        if (use_spacecontrol or use_guidance or use_shape_guidance) and spatial_control_path is None:
             raise ValueError(f"control_mode={control_mode} requires spatial_control_mesh_path")
 
         guidance_build_keys = {
@@ -606,6 +667,19 @@ class SpaceControlPipeline(Pipeline):
             if key in guidance_build_keys:
                 guidance_build_kwargs[key] = sparse_structure_sampler_params.pop(key)
 
+        guidance_sampler_keys = {
+            "geometry_guidance_strength",
+            "geometry_guidance_interval",
+            "geometry_guidance_schedule",
+            "geometry_guidance_rescale",
+            "geometry_grad_clip",
+            "geometry_guidance_cfg_mode",
+        }
+        guidance_sampler_kwargs = {}
+        for key in list(sparse_structure_sampler_params.keys()):
+            if key in guidance_sampler_keys:
+                guidance_sampler_kwargs[key] = sparse_structure_sampler_params.pop(key)
+
         if use_spacecontrol:
             spatial_control_latent = self.encode_spatial_control(spatial_control_path)
             cond_512["control"] = spatial_control_latent
@@ -620,6 +694,7 @@ class SpaceControlPipeline(Pipeline):
                 **guidance_build_kwargs,
             )
             sparse_structure_sampler_params["geometry_guidance"] = geometry_guidance
+            sparse_structure_sampler_params.update(guidance_sampler_kwargs)
             sparse_structure_sampler_params.setdefault("geometry_guidance_strength", 1.0)
             sparse_structure_sampler_params.setdefault("geometry_guidance_interval", (0.5, 0.95))
             sparse_structure_sampler_params.setdefault("geometry_guidance_schedule", "constant")
@@ -631,6 +706,57 @@ class SpaceControlPipeline(Pipeline):
             else:
                 sparse_structure_sampler_params["_sampler_override"] = samplers.FlowEulerGeometryGuidanceSampler(
                     sigma_min=self.sparse_structure_sampler.sigma_min
+                )
+
+        if use_shape_guidance:
+            shape_guidance_build_keys = {
+                "last_offset",
+                "last_sdf_resolution",
+                "generated_samples",
+                "last_samples",
+                "lambda_pen",
+                "lambda_cov",
+                "sdf_chunk_size",
+            }
+            shape_guidance_build_kwargs = {}
+            for key in list(shape_slat_sampler_params.keys()):
+                if key in shape_guidance_build_keys:
+                    shape_guidance_build_kwargs[key] = shape_slat_sampler_params.pop(key)
+
+            shape_guidance_sampler_keys = {
+                "shape_geometry_guidance_strength",
+                "shape_geometry_guidance_interval",
+                "shape_geometry_guidance_schedule",
+                "shape_geometry_guidance_rescale",
+                "shape_geometry_grad_clip",
+                "shape_geometry_guidance_cfg_mode",
+                "lambda_prior",
+            }
+            shape_guidance_sampler_kwargs = {}
+            for key in list(shape_slat_sampler_params.keys()):
+                if key in shape_guidance_sampler_keys:
+                    shape_guidance_sampler_kwargs[key] = shape_slat_sampler_params.pop(key)
+
+            shape_geometry_guidance = build_shape_slat_guidance(
+                shape_guidance_type,
+                self,
+                spatial_control_path,
+                **shape_guidance_build_kwargs,
+            )
+            shape_slat_sampler_params["shape_geometry_guidance"] = shape_geometry_guidance
+            shape_slat_sampler_params.update(shape_guidance_sampler_kwargs)
+            shape_slat_sampler_params.setdefault("shape_geometry_guidance_strength", 1.0)
+            shape_slat_sampler_params.setdefault("shape_geometry_guidance_interval", (0.5, 0.95))
+            shape_slat_sampler_params.setdefault("shape_geometry_guidance_schedule", "constant")
+            shape_slat_sampler_params.setdefault("shape_geometry_guidance_rescale", True)
+            shape_slat_sampler_params.setdefault("shape_geometry_grad_clip", 5.0)
+            shape_slat_sampler_params.setdefault("shape_geometry_guidance_cfg_mode", "cond_only")
+            shape_slat_sampler_params.setdefault("lambda_prior", 0.0)
+            if isinstance(self.shape_slat_sampler, samplers.FlowEulerShapeGuidanceSampler):
+                shape_slat_sampler_params["_sampler_override"] = self.shape_slat_sampler
+            else:
+                shape_slat_sampler_params["_sampler_override"] = samplers.FlowEulerShapeGuidanceSampler(
+                    sigma_min=self.shape_slat_sampler.sigma_min
                 )
 
         ss_res = {"512": 32, "1024": 64, "1024_cascade": 32, "1536_cascade": 32}[pipeline_type]

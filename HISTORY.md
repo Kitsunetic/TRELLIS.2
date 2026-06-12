@@ -317,6 +317,37 @@ This remained:
 
 But visually it is still obviously voxel-derived.
 
+### SDF solidify follow-up
+
+The blocky look was confirmed to come primarily from binary voxel-volume solidify, not from sparse shape guidance.
+
+Added an SDF-based solidify path:
+- `solidify_mesh_with_sdf(...)`
+- `--solidify_method sdf`
+- `solidify_existing_mesh.py` for reprocessing an existing GLB without rerunning TRELLIS generation
+
+Best current SDF artifact:
+- `results/both_containment_sdf_r192_margin/`
+  - `shoe4_rembg-sdf-r192-margin.glb`
+  - `shoe4_rembg-sdf-r192-margin.mp4`
+  - `frame0.png`
+  - `topology.json`
+
+Topology:
+- before:
+  - `num_boundaries = 736705`
+  - `num_connected_components = 65901`
+  - `num_boundary_loops = 68023`
+- SDF solidified:
+  - `num_boundaries = 0`
+  - `num_connected_components = 1`
+  - `num_boundary_loops = 0`
+
+Important detail:
+- SDF sampling needs a small domain margin because the generated shoe reaches the unit-cube boundary.
+- Without `--domain_margin 0.03`, the SDF result had one component but still had boundary edges.
+- With `--domain_margin 0.03`, the result became watertight and one-piece.
+
 
 ## Current Best Practical Recipe
 
@@ -339,6 +370,83 @@ This is the current best answer to:
 - one watertight mesh
 - last embedded inside is okay
 
+For a less blocky result from an existing raw/aggressively repaired GLB, the current better-looking path is:
+
+```bash
+CUDA_VISIBLE_DEVICES=2 python solidify_existing_mesh.py \
+  --input results/both_containment_watertight/shoe4_rembg-tau6.glb \
+  --control assets/last_normalized.ply \
+  --output results/both_containment_sdf_r192_margin/shoe4_rembg-sdf-r192-margin.glb \
+  --topology_output results/both_containment_sdf_r192_margin/topology.json \
+  --resolution 192 \
+  --generated_surface_thickness 1.5 \
+  --control_offset 1.0 \
+  --smoothing_sigma 0.75 \
+  --domain_margin 0.03 \
+  --smoothing_iters 10
+```
+
+### No-guidance baseline
+
+Created a baseline with generation guidance minimized by using `control_mode=none`.
+
+Important execution detail:
+- On the current Blackwell GPU environment, the default `flex_gemm` sparse convolution backend failed during Triton compilation for `cuda:120`.
+- The successful raw generation used `SPARSE_CONV_BACKEND=spconv`.
+- The input control mesh was still passed to the CLI for consistency with existing command shape, but `control_mode=none` means it was not used for SpaceControl or geometry guidance.
+- The SDF postprocess intentionally omitted `--control`, so the last was not unioned back into the no-guidance result.
+
+Raw no-guidance artifacts:
+- `results/no_guidance_raw/shoe4_rembg-tau6.glb`
+- `results/no_guidance_raw/shoe4_rembg-tau6.mp4`
+- `results/no_guidance_raw/shoe4_rembg-tau6-topology.json`
+
+Raw topology:
+- before/after:
+  - `num_boundaries = 57`
+  - `num_connected_components = 1474`
+  - `num_boundary_loops = 1`
+
+SDF no-guidance artifacts:
+- `results/no_guidance_sdf_r192_margin/shoe4_rembg-sdf-r192-margin.glb`
+- `results/no_guidance_sdf_r192_margin/shoe4_rembg-sdf-r192-margin.mp4`
+- `results/no_guidance_sdf_r192_margin/frame0.png`
+- `results/no_guidance_sdf_r192_margin/topology.json`
+
+SDF topology:
+- before:
+  - `num_boundaries = 103130`
+  - `num_connected_components = 13410`
+  - `num_boundary_loops = 13447`
+- SDF solidified / after smoothing:
+  - `num_boundaries = 0`
+  - `num_connected_components = 1`
+  - `num_boundary_loops = 0`
+
+Reproduction commands:
+
+```bash
+SPARSE_CONV_BACKEND=spconv CUDA_VISIBLE_DEVICES=1 python example_guidance.py \
+  --image assets/shoe4_rembg.png \
+  --control assets/last_normalized.ply \
+  --control_mode none \
+  --out_dir results/no_guidance_raw
+```
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python solidify_existing_mesh.py \
+  --input results/no_guidance_raw/shoe4_rembg-tau6.glb \
+  --output results/no_guidance_sdf_r192_margin/shoe4_rembg-sdf-r192-margin.glb \
+  --topology_output results/no_guidance_sdf_r192_margin/topology.json \
+  --video_output results/no_guidance_sdf_r192_margin/shoe4_rembg-sdf-r192-margin.mp4 \
+  --frame_output results/no_guidance_sdf_r192_margin/frame0.png \
+  --resolution 192 \
+  --generated_surface_thickness 1.5 \
+  --smoothing_sigma 0.75 \
+  --domain_margin 0.03 \
+  --smoothing_iters 10
+```
+
 
 ## Known Limitations
 
@@ -348,6 +456,7 @@ This is the current best answer to:
 2. Solidify introduces voxelized shape artifacts.
    - Higher resolution helps but costs more.
    - Smoothing helps but does not remove the core discretization look.
+   - The SDF solidify path reduces this blockiness, but can still look over-smoothed/lumpy because it rebuilds from a distance field.
 
 3. The final solidified mesh is plain geometry.
    - In the solidify branch, export uses plain `trimesh.Trimesh(...).export(...)`
@@ -363,14 +472,11 @@ The next AI should not waste time pushing `fill_holes()` harder on the raw decod
 
 Most promising next direction:
 
-1. Replace occupancy-style solidify with **signed-distance solidify**
-   - Candidate tool:
-     - `cumesh.bvh.cuBVH.signed_distance(...)`
-   - Likely approach:
-     - compute a dense signed-distance field over the unit cube
-     - merge generated surface signal with control-last occupancy / dilation
-     - extract a smoother watertight surface from the SDF
-   - This is the best shot at keeping one-piece watertight while reducing stair-step artifacts
+1. Continue tuning **SDF solidify**
+   - Current implementation uses `cumesh.bvh.cuBVH` distance queries.
+   - Generated raw mesh is open, so it is treated as an unsigned-distance band.
+   - Control last is unioned as signed distance.
+   - Tune `resolution`, `generated_surface_thickness`, `control_offset`, `smoothing_sigma`, and `domain_margin`.
 
 2. If keeping current solidify path:
    - tune `resolution`, morphology radii, and smoothing together
@@ -433,8 +539,9 @@ Use these on top of the same command:
 
 ## Workspace Notes
 
-- There are unrelated dirty files in the worktree. Do not revert user changes casually.
-- Relevant modified/untracked files for this thread include:
+- Current checkout has a local `results` symlink to `/home/rvi/ns2/jaehyeok/results/TRELLIS.2`.
+- The `results` symlink is local workspace state and should not be committed.
+- The implementation files below are tracked in git:
   - `example_guidance.py`
   - `example_spacecontrol.py`
   - `trellis2/utils/glb_utils.py`
@@ -446,4 +553,4 @@ Use these on top of the same command:
   - `trellis2/pipelines/samplers/flow_euler.py`
   - `trellis2/representations/mesh/base.py`
   - `trellis2/modules/image_feature_extractor.py`
-
+- The experimental `results/...` artifact directories referenced above are not tracked by git, but are currently accessible through the local symlink. Regenerate them with the recorded commands if the symlink target is unavailable.

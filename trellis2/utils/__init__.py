@@ -1,3 +1,3 @@
 from trellis2.utils.glb_utils import to_glb_z_up
 from trellis2.utils.mesh_repair import aggressive_repair_mesh, mesh_topology_stats
-from trellis2.utils.mesh_solidify import smooth_mesh_taubin, solidify_mesh_with_control
+from trellis2.utils.mesh_solidify import smooth_mesh_taubin, solidify_mesh_with_control, solidify_mesh_with_sdf
