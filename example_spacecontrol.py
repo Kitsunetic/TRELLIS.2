@@ -131,6 +131,15 @@ def main(args):
     )[0]
 
     mesh.simplify(16777216)  # nvdiffrast limit
+    model_scale = float(args.model_scale)
+    if model_scale <= 0:
+        raise ValueError(f"--model_scale must be positive, got {model_scale}")
+
+    # Keep original vertices for texture baking, then scale render/export geometry.
+    glb_vertices = mesh.vertices
+    if model_scale != 1.0:
+        print(f"Scaling generated model by {model_scale}x...")
+        mesh.vertices = mesh.vertices * model_scale
 
     # ---------------------------------------------------------
     # [추가됨] 출력 디렉토리 생성 및 파일명 자동 구성
@@ -193,6 +202,8 @@ def main(args):
             remesh_project=0,
             verbose=True,
         )
+        if model_scale != 1.0:
+            glb.apply_scale(model_scale)
         glb.export(mesh_out, extension_webp=True)
     print("✨ Done!")
 
@@ -206,6 +217,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42, help="Random seed for generation")
     parser.add_argument("--out_dir", type=str, default="outputs", help="Directory to save the generated files")
     parser.add_argument("--name", type=str, default=None, help="Optional basename for outputs")
+    parser.add_argument("--model_scale", type=float, default=1.3, help="Scale factor applied to the generated 3D model")
     parser.add_argument("--skip_video", action="store_true", help="Skip video rendering")
     parser.add_argument("--skip_glb", action="store_true", help="Skip GLB export")
     parser.add_argument("--under_view_out", type=str, default=None, help="Optional output path for an underside render")
